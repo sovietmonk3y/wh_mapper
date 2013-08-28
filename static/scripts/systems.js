@@ -1,0 +1,327 @@
+﻿var paper;
+
+$(document).ready(function() {
+    $('select').on('change', function() {
+        if (this.value) window.location = '/' + this.value;
+    });
+
+    document.onclick = function (e) {
+        var tag_name = e.target.tagName.toLowerCase();
+        if (tag_name != 'ellipse' && tag_name != 'text' && tag_name != 'tspan' &&
+            tag_name != 'a' && !$(e.target).closest('form').length) {
+            ClearSelection();
+        }
+    };
+
+    document.onkeydown = function (e) {
+        if (e.which == 27) ClearSelection();
+    };
+
+    $('#systemsHolder').on('click', '#add-connection', function(e) {
+        e.preventDefault();
+
+        var $stashConnectionForm = $('#stash .system-connection-form');
+        var $container = $(this).parent();
+        $container.html($stashConnectionForm.html());
+        $container.attr('class', $stashConnectionForm.attr('class'));
+        $container.find('input').first().focus();
+    });
+
+    $('#systemsHolder').on('click', '#delete-system', function(e) {
+        e.preventDefault();
+
+        $.ajax({
+            type: 'DELETE',
+            url: '/api/system_node/' +
+                 paper.getById($(this).parent().attr('data-ellipse-id')).system.id + '/',
+            success: function() {
+                window.location = '';
+            }
+        });
+    });
+
+    $('#systemsHolder').on('submit', '.system-connection-form', function(e) {
+        e.preventDefault();
+
+        var $formDiv = $(this);
+
+        var systemName = $formDiv.find('#system-name').val().trim();
+        if (systemName == '') {
+            alert('A valid system name must be entered.');
+            return false;
+        }
+
+        var $systemTypeInput = $formDiv.find('input:checked');
+        if (!$systemTypeInput.length) {
+            alert('A system type must be selected.');
+            return false;
+        }
+
+        $.ajax({
+            type: 'POST',
+            url: '/api/system_node/',
+            data: {'author': 'xcron',
+                   'name': systemName,
+                   'type': $systemTypeInput.val(),
+                   'page_name': $('select').val(),
+                   'parent_node': paper.getById($formDiv.attr('data-ellipse-id'))
+                                       .system.id},
+            success: function() {
+                window.location = '';
+            }
+        });
+    });
+
+    if (typeof(systemTree) != "undefined" && systemTree != null) {
+        var indentX = 180;
+        var indentY = 64;
+        paper = InitializeRaphael(indentX, indentY);
+
+        var currentY = 0;
+        var parentNode = systemTree;
+        var childNode = null;
+        parentNode.parent = null;
+        parentNode.x = 0;
+        parentNode.y = 0;
+        DrawSystem(paper, indentX, indentY, parentNode);
+        while (parentNode != null) {
+            if (childNode && !childNode.drawn) {
+                DrawSystem(paper, indentX, indentY, childNode);
+                childNode.drawn = true;
+            }
+
+            if (parentNode.children.length) {
+                if (childNode) {
+                    if (childNode.children && childNode.children.length &&
+                        !childNode.children[0].drawn) {
+                        parentNode = childNode;
+                        childNode = childNode.children[0];
+                        childNode.parent = parentNode;
+                        childNode.index = 0;
+                        childNode.x = parentNode.x + 1;
+                        childNode.y = parentNode.y;
+                    }
+                    else if (childNode.index == (parentNode.children.length - 1) &&
+                             !parentNode.parent) {
+                        parentNode = null;
+                    }
+                    else if (childNode.index == (parentNode.children.length - 1) &&
+                             parentNode.parent) {
+                        childNode = parentNode;
+                        parentNode = parentNode.parent;
+                    }
+                    else {
+                        currentY++;
+                        parentNode.children[childNode.index + 1].index = childNode.index + 1;
+                        parentNode.children[childNode.index + 1].y = currentY;
+                        parentNode.children[childNode.index + 1].x = childNode.x;
+                        childNode = parentNode.children[childNode.index + 1];
+                        childNode.parent = parentNode;
+                    }
+                }
+                else {
+                    childNode = parentNode.children[0];
+                    childNode.parent = parentNode;
+                    childNode.index = 0;
+                    childNode.y = parentNode.y;
+                    childNode.x = parentNode.x + 1;
+                }
+            }
+            else {
+                parentNode = parentNode.parent;
+                childNode = null;
+            }
+        }
+    }
+});
+
+function InitializeRaphael(indentX, indentY) {
+    var canvasHeight = 80 + ((systemTreeWidth - 1) * indentY);
+    var canvasWidth = 110 + ((systemTreeLength - 1) * indentX);
+    return Raphael('systemsHolder', canvasWidth, canvasHeight);
+}
+
+function DrawSystem(paper, indentX, indentY, system) {
+    if (system == null) return;
+
+    var sysX = GetSystemX(indentX, system);
+    var sysY = GetSystemY(indentY, system);
+
+    var sysName = system.name;
+    if (system.type != null && system.type.length > 0) sysName += "\n(" + system.type + ")";
+    var sysText;
+
+    if (system.x != null && system.x > 0) {
+        system.ellipse = paper.ellipse(sysX, sysY, 45, 28);
+
+        sysText = paper.text(sysX, sysY, sysName);
+        sysText.ellipse = system.ellipse;
+
+        ConnectSystems(paper, system.parent, system, "#825E48");
+    }
+    else {
+        system.ellipse = paper.ellipse(sysX, sysY, 40, 30);
+
+        sysText = paper.text(sysX, sysY, sysName);
+        sysText.ellipse = system.ellipse;
+    }
+    system.ellipse.system = system;
+
+    ColorSystem(system, sysText);
+
+    system.ellipse.mouseover(OnSysOver);
+    system.ellipse.mouseout(OnSysOut);
+    system.ellipse.mousedown(OnSysDown);
+    sysText.mouseover(OnSysOver);
+    sysText.mouseout(OnSysOut);
+    sysText.mousedown(OnSysDown);
+}
+
+function GetSystemX(indentX, system) {
+    if (system) return 55 + indentX * system.x;
+    else alert("system is null or undefined");
+}
+
+function GetSystemY(indentY, system) {
+    if (system) return 40 + indentY * system.y;
+    else alert("system is null or undefined");
+}
+
+function ColorSystem(system, sysText) {
+    if (!system) {
+        alert("system is null or undefined");
+        return;
+    }
+
+    var sysColor = "#f00";
+    var sysStroke = "#fff";
+    var sysStrokeWidth = 2;
+    var textFontSize = 12;
+    var textColor = "#000";
+
+    if (system.x < 1) {
+        // root
+        sysColor = "#A600A6";
+        sysStroke = "#6A006A";
+        textColor = "#fff";
+        textFontSize = 14;
+    }
+    else {
+        // not selected
+        switch (system.type) {
+            case "Nullsec":
+                sysColor = "#CC0000";
+                sysStroke = "#840000";
+                textColor = "#fff";
+                break;
+            case "Lowsec":
+                sysColor = "#93841E";
+                sysStroke = "#7D5500";
+                textColor = "#fff";
+                break;
+            case "Highsec":
+                sysColor = "#009F00";
+                sysStroke = "#006600";
+                textColor = "#fff";
+                break;
+            default:
+                sysColor = "#F2F4FF";
+                sysStroke = "#0657B9";
+                textColor = "#0974EA";
+                break;
+        }
+    }
+
+    if (system.name.length > 16) textFontSize = 8;
+    else if (system.name.length > 11) textFontSize = 9;
+
+    system.ellipse.attr({fill: sysColor, stroke: sysStroke, "stroke-width": sysStrokeWidth, cursor: "pointer"});
+    sysText.attr({fill: textColor, "font-size": textFontSize, cursor: "pointer"});
+}
+
+function ConnectSystems(paper, parentSystem, childSystem, lineColor) {
+    var parentBox = parentSystem.ellipse.getBBox();
+    var childBox = childSystem.ellipse.getBBox();
+    var startY = parentBox.y + (parentBox.height / 2);
+    var path;
+    if (parentSystem.y == childSystem.y)
+        path = paper.path("M" + parentBox.x2 + "," + startY + "L" + childBox.x + "," + startY);
+    else {
+        var endY = childBox.y + (childBox.height / 2);
+        var parentControlX = parentBox.x2 + ((childBox.x - parentBox.x2) / 2);
+        var childControlX = childBox.x - ((childBox.x - parentBox.x2) / 2);
+        path = paper.path("M" + parentBox.x2 + "," + startY +
+                          "C" + parentControlX + "," + startY + "," +
+                          childControlX + "," + endY + "," +
+                          childBox.x + "," + endY);
+    }
+    path.attr({stroke: lineColor});
+}
+
+function OnSysOver() {
+    var ellipse;
+    if (this.type == 'ellipse') ellipse = this;
+    else ellipse = this.ellipse;
+    var system = ellipse.system;
+
+    ellipse.attr({"stroke-width": 4});
+
+    if (!system.$infoPanel && !system.$actionPanel) {
+        var ellipseBox = ellipse.getBBox();
+        system.$infoPanel = $('#stash .system-info').clone().appendTo('#systemsHolder');
+        system.$infoPanel.css({'top': ellipseBox.y, 'left': ellipseBox.x2});
+        system.$infoPanel.children('#system-info-author').append(system.author);
+        system.$infoPanel.children('#system-info-date').append(system.date);
+    }
+}
+
+function OnSysOut() {
+    var ellipse;
+    if (this.type == 'ellipse') ellipse = this;
+    else ellipse = this.ellipse;
+    var system = ellipse.system;
+
+    if (system.$infoPanel) {
+        ellipse.attr({"stroke-width": 2});
+        system.$infoPanel.remove();
+        system.$infoPanel = null;
+    }
+    else if (!system.$actionPanel) {
+        ellipse.attr({"stroke-width": 2});
+    }
+}
+
+function ClearSelection() {
+    paper.forEach(function (el) {
+        if (el.type == 'ellipse' && el.system.$actionPanel) {
+            el.attr({"stroke-width": 2});
+            el.system.$actionPanel.remove();
+            el.system.$actionPanel = null;
+        }
+    });
+}
+
+function OnSysDown(e) {
+    var ellipse;
+    if (this.type == 'ellipse') ellipse = this;
+    else ellipse = this.ellipse;
+    var system = ellipse.system;
+
+    if (system.$infoPanel) {
+        ClearSelection();
+
+        var $stashActionPanel = $('#stash .system-actions');
+        system.$actionPanel = system.$infoPanel;
+        system.$infoPanel = null;
+        system.$actionPanel.attr('class', $stashActionPanel.attr('class'));
+        system.$actionPanel.attr('data-ellipse-id', ellipse.id);
+        system.$actionPanel.html($stashActionPanel.html());
+    }
+    else if (!system.$actionPanel) {
+        ClearSelection();
+
+        var ellipseBox = ellipse.getBBox();
+        system.$actionPanel = $('#stash .system-actions').clone().appendTo('#systemsHolder');
+        system.$actionPanel.css({'top': ellipseBox.y, 'left': ellipseBox.x2});
+    }
+}

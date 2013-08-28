@@ -1,0 +1,23 @@
+﻿#stash {
+    display: none;
+}
+
+#systemsHolder {
+    position: relative;
+}
+
+.system-info, .system-actions, .system-connection-form {
+    border: 1px solid #80ADC1;
+
+    border-radius: 10px;
+    -webkit-border-radius: 10px;
+
+    position: absolute;
+    padding: 5px 10px;
+    font-size: 13px;
+    background-image: url('/static/images/whInfoBgr.png');
+}
+
+table {
+    font-size: 13px;
+}

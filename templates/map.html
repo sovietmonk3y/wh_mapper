@@ -1,0 +1,60 @@
+﻿<html>
+    <head>
+        <script type="text/javascript">
+            var systemTree = {{ system_tree|safe }};
+            var systemTreeLength = {{ system_tree_length }};
+            var systemTreeWidth = {{ system_tree_width }};
+        </script>
+
+        <script type="text/javascript" src="{{ STATIC_URL }}/scripts/plugins/jquery-2.0.2.min.js"></script>
+        <script type="text/javascript" src="{{ STATIC_URL }}/scripts/plugins/raphael-min.js"></script>
+        <script type="text/javascript" src="{{ STATIC_URL }}/scripts/systems.js"></script>
+        <link rel="stylesheet" href="{{ STATIC_URL }}/styles/styles.css"></link>
+    </head>
+
+    <body>
+        <br />Map page: 
+        <select>
+            <option value=""></option>
+            {% for map_page in map_pages %}
+                <option value="{{ map_page }}"{% if page and page == map_page %} selected="true"{% endif %}>{{ map_page }}</option>
+            {% endfor %}
+        </select>
+        <br /><br />
+        <div id="systemsHolder"></div> 
+
+        <div id="stash">
+            <div class="system-info">
+                <div id="system-info-author">Author: </div>
+                <div id="system-info-date">Last modified: </div>
+            </div>
+
+            <div class="system-actions">
+                <a id="add-connection" href="">Add connection</a><br/>
+                <a id="delete-system" href="">Delete system</a>
+            </div>
+
+            <div class="system-connection-form">
+                <form>
+                    <table>
+                        <tr>
+                            <td>Name:</td>
+                            <td><input id="system-name"></td>
+                        </tr>
+                        <tr><td>Type:</td></tr>
+                        {% for system_type in SYSTEM_TYPES %}
+                            <tr>
+                                <td></td>
+                                <td>
+                                    <input name="system-type" type="radio" value="{{ system_type.0 }}">
+                                    {{ system_type.1 }}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        <tr><td></td><td><input type="submit" value="Submit"></td></tr>
+                    </table>
+                </form>
+            </div>
+        </div>
+    </body>
+</html>
