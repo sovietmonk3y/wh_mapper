@@ -1,4 +1,6 @@
-﻿<html>
+{% load staticfiles %}
+
+<html>
     <head>
         <script type="text/javascript">
             var systemTree = {{ system_tree|safe }};
@@ -6,10 +8,10 @@
             var systemTreeWidth = {{ system_tree_width }};
         </script>
 
-        <script type="text/javascript" src="{{ STATIC_URL }}scripts/plugins/jquery-2.0.2.min.js"></script>
-        <script type="text/javascript" src="{{ STATIC_URL }}scripts/plugins/raphael-min.js"></script>
-        <script type="text/javascript" src="{{ STATIC_URL }}scripts/systems.js"></script>
-        <link rel="stylesheet" href="{{ STATIC_URL }}styles/styles.css"></link>
+        <script type="text/javascript" src="{% static 'scripts/plugins/jquery-2.0.2.min.js' %}"></script>
+        <script type="text/javascript" src="{% static 'scripts/plugins/raphael-min.js' %}"></script>
+        <script type="text/javascript" src="{% static 'scripts/systems.js' %}"></script>
+        <link rel="stylesheet" href="{% static 'styles/styles.css' %}"></link>
     </head>
 
     <body>

@@ -61,4 +61,4 @@ def system_map(request, page=None):
                      'map_pages': map_pages,
                      'SYSTEM_TYPES': SYSTEM_TYPE_CHOICES}
 
-    return render_to_response('map.html', template_vars, context_instance=RequestContext(request))
+    return render_to_response('map.html', template_vars)
