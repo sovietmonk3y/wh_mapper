@@ -1,7 +1,6 @@
 import json
 
 from django.shortcuts import render_to_response
-from django.template import RequestContext
 
 from wh_mapper.constants import SYSTEM_TYPE_CHOICES
 import wh_mapper.models as wh_mapper_models

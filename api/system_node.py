@@ -12,7 +12,7 @@ class SystemNodeCreateAPI(View):
             create_form.save()
             return HttpResponse()
         else:
-            return HttpResponseBadRequest(create_form.errors)
+            return HttpResponseBadRequest(create_form.errors.as_ul())
 
 
 class SystemNodeDeleteAPI(View):
