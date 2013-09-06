@@ -18,6 +18,16 @@ SYSTEM_TYPE_CHOICES = (
     ('c5', 'C5'),
     ('c6', 'C6')
 )
+SYSTEM_REGION_MAX_LENGTH = 20
+SYSTEM_WSPACE_EFFECT_MAX_LENGTH = 1
+SYSTEM_WSPACE_EFFECT_CHOICES = (
+    ('b', 'Black Hole'),
+    ('c', 'Cataclysmic Variable'),
+    ('m', 'Magnetar'),
+    ('p', 'Pulsar'),
+    ('r', 'Red Giant'),
+    ('w', 'Wolf-Rayet')
+)
 
 WORMHOLE_SIG_MAX_LENGTH = 4
 WORMHOLE_TYPE_MAX_LENGTH = 9
