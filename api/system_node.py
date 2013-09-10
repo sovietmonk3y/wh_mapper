@@ -12,7 +12,7 @@ class SystemNodeCreateAPI(View):
             create_form.save()
             return HttpResponse()
         else:
-            return HttpResponseBadRequest(create_form.errors.as_ul())
+            return HttpResponseBadRequest(create_form.errors.as_text())
 
 
 class SystemNodeDeleteAPI(View):
@@ -26,7 +26,7 @@ class SystemNodeDeleteAPI(View):
                 node_id_valid = True
                 break
         if not node_id_valid:
-            return HttpResponseBadRequest('Invalid system ID.')
+            return HttpResponseBadRequest('Invalid system ID')
 
         node_delete_id_list = [node_id]
         current_level_id_list = node_delete_id_list

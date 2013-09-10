@@ -9,3 +9,10 @@ class SystemNodeCreateForm(forms.ModelForm):
     class Meta:
         model = wh_mapper_models.SystemNode
         exclude = ['id', 'date']
+
+    def clean(self):
+        if 'system' in self.errors:
+            self.errors['system'] = ['That is not a valid system']
+
+        data = super(SystemNodeCreateForm, self).clean()
+        return data

@@ -60,6 +60,9 @@ $(document).ready(function() {
                  paper.getById($(this).parent().attr('data-ellipse-id')).system.id + '/',
             success: function() {
                 window.location = '';
+            },
+            error: function(xhr) {
+                alert(xhr.responseText);
             }
         });
     });
@@ -85,6 +88,9 @@ $(document).ready(function() {
                                        .system.id},
             success: function() {
                 window.location = '';
+            },
+            error: function(xhr) {
+                alert(xhr.responseText);
             }
         });
     });
