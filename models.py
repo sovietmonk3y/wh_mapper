@@ -12,12 +12,18 @@ from wh_mapper.constants import NODE_ID_MAX_LENGTH, USERNAME_MAX_LENGTH, \
     WORMHOLE_JUMP_MASS_MAX_LENGTH
 
 
+class System(models.Model):
+    name = models.CharField(max_length=SYSTEM_NAME_MAX_LENGTH, primary_key=True)
+    type = models.CharField(max_length=SYSTEM_TYPE_MAX_LENGTH, choices=SYSTEM_TYPE_CHOICES)
+    region = models.CharField(max_length=SYSTEM_REGION_MAX_LENGTH)
+    wspace_effect = models.CharField(max_length=SYSTEM_WSPACE_EFFECT_MAX_LENGTH, choices=SYSTEM_WSPACE_EFFECT_CHOICES)
+
+
 class SystemNode(models.Model):
     id = models.CharField(max_length=NODE_ID_MAX_LENGTH, primary_key=True)
     date = models.DateTimeField()
     author = models.CharField(max_length=USERNAME_MAX_LENGTH)
-    name = models.CharField(max_length=SYSTEM_NAME_MAX_LENGTH)
-    type = models.CharField(max_length=SYSTEM_TYPE_MAX_LENGTH, choices=SYSTEM_TYPE_CHOICES)
+    system = models.ForeignKey(System, null=True)
     parent_node = models.ForeignKey('self', null=True)
     page_name = models.CharField(max_length=SYSTEM_NODE_PAGE_NAME_MAX_LENGTH)
     notes = models.CharField(max_length=SYSTEM_NODE_NOTES_MAX_LENGTH)
@@ -33,15 +39,8 @@ class SystemNode(models.Model):
         return {'id' : self.id,
                 'date' : str(self.date),
                 'author' : self.author,
-                'name' : self.name,
-                'type' : self.get_type_display()}
-
-
-class System(models.Model):
-    name = models.CharField(max_length=SYSTEM_NAME_MAX_LENGTH, primary_key=True)
-    type = models.CharField(max_length=SYSTEM_TYPE_MAX_LENGTH, choices=SYSTEM_TYPE_CHOICES)
-    region = models.CharField(max_length=SYSTEM_REGION_MAX_LENGTH)
-    wspace_effect = models.CharField(max_length=SYSTEM_WSPACE_EFFECT_MAX_LENGTH, choices=SYSTEM_WSPACE_EFFECT_CHOICES)
+                'name' : self.system.name,
+                'type' : self.system.type}
 
 
 class Wormhole(models.Model):

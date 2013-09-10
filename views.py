@@ -2,11 +2,10 @@ import json
 
 from django.shortcuts import render_to_response
 
-from wh_mapper.constants import SYSTEM_TYPE_CHOICES
 import wh_mapper.models as wh_mapper_models
 
 def system_map(request, page=None):
-    nodes = wh_mapper_models.SystemNode.objects.all().order_by('parent_node', 'date')
+    nodes = wh_mapper_models.SystemNode.objects.select_related().order_by('parent_node', 'date')
     map_pages = set([node.page_name for node in nodes])
     if page:
         nodes = [node for node in nodes if node.page_name == page]
@@ -57,7 +56,6 @@ def system_map(request, page=None):
                      'system_tree_length': node_tree_length,
                      'system_tree_width': node_tree_width,
                      'page': page,
-                     'map_pages': map_pages,
-                     'SYSTEM_TYPES': SYSTEM_TYPE_CHOICES}
+                     'map_pages': map_pages}
 
     return render_to_response('map.html', template_vars)

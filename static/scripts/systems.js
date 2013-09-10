@@ -24,7 +24,31 @@ $(document).ready(function() {
         var $container = $(this).parent();
         $container.html($stashConnectionForm.html());
         $container.attr('class', $stashConnectionForm.attr('class'));
-        $container.find('input').first().focus();
+        $container.find('input').first().focus().autocomplete({
+            select: function (event, ui) {
+                $(this).closest('form').find('input').last().removeAttr('disabled');
+            },
+            source: function (request, response) {
+                var $input = this.element;
+                var $submit = $input.closest('form').find('input').last();
+                $.ajax({
+                    type: 'GET',
+                    url: '/api/system/autocomplete/' + request.term + '/',
+                    success: function(data) {
+                        var dataArray = JSON.parse(data);
+                        if (dataArray.length == 1) {
+                            $input.val(dataArray[0]);
+                            $submit.removeAttr('disabled');
+                            response();
+                        }
+                        else {
+                            $submit.attr('disabled', true);
+                            response(dataArray);
+                        }
+                    }
+                });
+            }
+        });
     });
 
     $('#systemsHolder').on('click', '#delete-system', function(e) {
@@ -46,14 +70,8 @@ $(document).ready(function() {
         var $formDiv = $(this);
 
         var systemName = $formDiv.find('#system-name').val().trim();
-        if (systemName == '') {
+        if ($formDiv.find('input').last().attr('disabled') || systemName == '') {
             alert('A valid system name must be entered.');
-            return false;
-        }
-
-        var $systemTypeInput = $formDiv.find('input:checked');
-        if (!$systemTypeInput.length) {
-            alert('A system type must be selected.');
             return false;
         }
 
@@ -61,8 +79,7 @@ $(document).ready(function() {
             type: 'POST',
             url: '/api/system_node/',
             data: {'author': 'xcron',
-                   'name': systemName,
-                   'type': $systemTypeInput.val(),
+                   'system': systemName,
                    'page_name': $('select').val(),
                    'parent_node': paper.getById($formDiv.attr('data-ellipse-id'))
                                        .system.id},
@@ -209,17 +226,17 @@ function ColorSystem(system, sysText) {
     else {
         // not selected
         switch (system.type) {
-            case "Nullsec":
+            case "null":
                 sysColor = "#CC0000";
                 sysStroke = "#840000";
                 textColor = "#fff";
                 break;
-            case "Lowsec":
+            case "low":
                 sysColor = "#93841E";
                 sysStroke = "#7D5500";
                 textColor = "#fff";
                 break;
-            case "Highsec":
+            case "high":
                 sysColor = "#009F00";
                 sysStroke = "#006600";
                 textColor = "#fff";

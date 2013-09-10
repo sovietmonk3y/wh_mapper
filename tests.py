@@ -6,8 +6,7 @@ class SystemNodeTestUtilities():
 
     def create_test_root_node(self):
         test_root_node = wh_mapper_models.SystemNode(author='testuser',
-                                                     name='Testville',
-                                                     type='high',
+                                                     system_id='jita',
                                                      page_name='testpage')
         test_root_node.save()
         return test_root_node.id
@@ -15,8 +14,7 @@ class SystemNodeTestUtilities():
 
 class SystemNodeCreateAPITestCase(TestCase):
     url = '/api/system_node/'
-    data = {'author': 'testuser', 'name': 'Testville', 'type': 'high',
-            'page_name': 'testpage'}
+    data = {'author': 'testuser', 'system': 'jita', 'page_name': 'testpage'}
 
     def test_create_root_node(self):
         response = self.client.post(self.url, self.data)
@@ -43,20 +41,9 @@ class SystemNodeCreateAPITestCase(TestCase):
         except:
             pass
 
-    def test_create_node_missing_name(self):
+    def test_create_node_missing_system(self):
         data = self.data.copy()
-        del data['name']
-        response = self.client.post(self.url, data)
-        self.assertEqual(response.status_code, 400)
-        try:
-            wh_mapper_models.SystemNode.objects.get(**data)
-            raise self.failureException('System node object was created')
-        except:
-            pass
-
-    def test_create_node_missing_type(self):
-        data = self.data.copy()
-        del data['type']
+        del data['system']
         response = self.client.post(self.url, data)
         self.assertEqual(response.status_code, 400)
         try:
@@ -76,20 +63,9 @@ class SystemNodeCreateAPITestCase(TestCase):
         except:
             pass
 
-    def test_create_node_invalid_name(self):
+    def test_create_node_invalid_system(self):
         data = self.data.copy()
-        data['name'] = '         '
-        response = self.client.post(self.url, data)
-        self.assertEqual(response.status_code, 400)
-        try:
-            wh_mapper_models.SystemNode.objects.get(**data)
-            raise self.failureException('System node object was created')
-        except:
-            pass
-
-    def test_create_node_invalid_type(self):
-        data = self.data.copy()
-        data['type'] = 'invalid type'
+        data['system'] = '         '
         response = self.client.post(self.url, data)
         self.assertEqual(response.status_code, 400)
         try:

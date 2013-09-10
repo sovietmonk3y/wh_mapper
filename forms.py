@@ -8,11 +8,4 @@ class SystemNodeCreateForm(forms.ModelForm):
 
     class Meta:
         model = wh_mapper_models.SystemNode
-        fields = ['author', 'name', 'type', 'parent_node', 'page_name', 'notes']
         exclude = ['id', 'date']
-
-    def clean_name(self):
-        data = self.cleaned_data['name']
-        if data.strip() == '':
-            raise forms.ValidationError('Invalid name')
-        return data

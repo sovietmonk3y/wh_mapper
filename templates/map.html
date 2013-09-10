@@ -9,9 +9,11 @@
         </script>
 
         <script type="text/javascript" src="{% static 'scripts/plugins/jquery-2.0.2.min.js' %}"></script>
+        <script type="text/javascript" src="{% static 'scripts/plugins/jquery-ui-1.10.3.custom.min.js' %}"></script>
         <script type="text/javascript" src="{% static 'scripts/plugins/raphael-min.js' %}"></script>
         <script type="text/javascript" src="{% static 'scripts/systems.js' %}"></script>
         <link rel="stylesheet" href="{% static 'styles/styles.css' %}"></link>
+        <link rel="stylesheet" href="{% static 'styles/jquery-ui-1.10.3.custom.min.css' %}"></link>
     </head>
 
     <body>
@@ -43,17 +45,7 @@
                             <td>Name:</td>
                             <td><input id="system-name"></td>
                         </tr>
-                        <tr><td>Type:</td></tr>
-                        {% for system_type in SYSTEM_TYPES %}
-                            <tr>
-                                <td></td>
-                                <td>
-                                    <input name="system-type" type="radio" value="{{ system_type.0 }}">
-                                    {{ system_type.1 }}
-                                </td>
-                            </tr>
-                        {% endfor %}
-                        <tr><td></td><td><input type="submit" value="Submit"></td></tr>
+                        <tr><td></td><td><input type="submit" value="Submit" disabled></td></tr>
                     </table>
                 </form>
             </div>
