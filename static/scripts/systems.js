@@ -295,6 +295,11 @@ function OnSysOver() {
         system.$infoPanel.css({'top': ellipseBox.y, 'left': ellipseBox.x2});
         system.$infoPanel.children('#system-info-author').append(system.author);
         system.$infoPanel.children('#system-info-date').append(system.date);
+        if (system.wspace_effect) {
+            var $effectDiv = system.$infoPanel.children('#system-info-wspace-effect');
+            $effectDiv.append(system.wspace_effect);
+            $effectDiv.css('display', 'block');
+        }
     }
 }
 
