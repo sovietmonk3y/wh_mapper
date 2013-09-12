@@ -47,7 +47,8 @@ class SystemNode(models.Model):
 class Wormhole(models.Model):
     sig = models.CharField(max_length=wmc.WORMHOLE_SIG_MAX_LENGTH, primary_key=True)
     type = models.CharField(max_length=wmc.SYSTEM_TYPE_MAX_LENGTH, choices=wmc.SYSTEM_TYPE_CHOICES)
-    #type = models.CharField(max_length=WORMHOLE_TYPE_MAX_LENGTH, choices=WORMHOLE_TYPES)
-    life = models.IntegerField(max_length=wmc.WORMHOLE_LIFE_MAX_LENGTH)
-    total_mass = models.IntegerField(max_length=wmc.WORMHOLE_TOTAL_MASS_MAX_LENGTH)
-    jump_mass = models.IntegerField(max_length=wmc.WORMHOLE_JUMP_MASS_MAX_LENGTH)
+    life = models.PositiveSmallIntegerField()
+    total_mass = models.BigIntegerField()
+    mass_regen = models.PositiveIntegerField()
+    jump_mass = models.PositiveIntegerField()
+    static = models.BooleanField()

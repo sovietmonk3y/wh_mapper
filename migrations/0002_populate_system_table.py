@@ -7728,14 +7728,6 @@ class Migration(DataMigration):
             'page_name': ('django.db.models.fields.CharField', [], {'max_length': '10'}),
             'parent_node': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['wh_mapper.SystemNode']", 'null': 'True'}),
             'type': ('django.db.models.fields.CharField', [], {'max_length': '4'})
-        },
-        u'wh_mapper.wormhole': {
-            'Meta': {'object_name': 'Wormhole'},
-            'jump_mass': ('django.db.models.fields.IntegerField', [], {'max_length': '10'}),
-            'life': ('django.db.models.fields.IntegerField', [], {'max_length': '2'}),
-            'sig': ('django.db.models.fields.CharField', [], {'max_length': '4', 'primary_key': 'True'}),
-            'total_mass': ('django.db.models.fields.IntegerField', [], {'max_length': '10'}),
-            'type': ('django.db.models.fields.CharField', [], {'max_length': '4'})
         }
     }
 
