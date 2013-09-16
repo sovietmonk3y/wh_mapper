@@ -2,19 +2,79 @@
 
 $(document).ready(function() {
     $('select').on('change', function() {
-        if (this.value) window.location = '/' + this.value;
+        if(this.value) window.location = '/' + this.value;
     });
 
-    document.onclick = function (e) {
+    $('#create-page').on('click', function(e) {
+        e.preventDefault();
+
+        if($('body').children('.new-page-form').length) return;
+
+        var $formDiv = $(this).after($('#stash .new-page-form')).next();
+        $formDiv.find('#page-name').focus();
+        $formDiv.find('#system-name').autocomplete({
+            source: function(request, response) {
+                var $input = this.element;
+                $.ajax({
+                    type: 'GET',
+                    url: '/api/system/autocomplete/' + request.term + '/',
+                    success: function(data) {
+                        var dataArray = JSON.parse(data);
+                        if(dataArray.length == 1) {
+                            $input.val(dataArray[0]);
+                            response();
+                        }
+                        else response(dataArray);
+                    }
+                });
+            }
+        });
+    });
+
+    $('body').on('submit', '.new-page-form', function(e) {
+        e.preventDefault();
+
+        var $formDiv = $(this);
+
+        var pageName = $formDiv.find('#page-name').val().trim();
+        if(pageName == '') {
+            alert('A valid page name must be entered.');
+            return;
+        }
+
+        var systemName = $formDiv.find('#system-name').val().trim();
+        if(systemName == '') {
+            alert('A valid system name must be entered.');
+            return;
+        }
+
+        $.ajax({
+            type: 'POST',
+            url: '/api/system_node/',
+            data: {
+                'author': 'xcron',
+                'system': systemName,
+                'page_name': pageName
+            },
+            success: function() {
+                window.location = '/' + pageName;
+            },
+            error: function(xhr) {
+                alert(xhr.responseText);
+            }
+        });
+    });
+
+    document.onclick = function(e) {
         var tag_name = e.target.tagName.toLowerCase();
-        if (tag_name != 'ellipse' && tag_name != 'text' && tag_name != 'tspan' &&
+        if(tag_name != 'ellipse' && tag_name != 'text' && tag_name != 'tspan' &&
             tag_name != 'a' && !$(e.target).closest('form').length) {
             ClearSelection();
         }
     };
 
-    document.onkeydown = function (e) {
-        if (e.which == 27) ClearSelection();
+    document.onkeydown = function(e) {
+        if(e.which == 27) ClearSelection();
     };
 
     $('#systemsHolder').on('click', '#add-connection', function(e) {
@@ -24,19 +84,19 @@ $(document).ready(function() {
         var $container = $(this).parent();
         $container.html($stashConnectionForm.html());
         $container.attr('class', $stashConnectionForm.attr('class'));
-        $container.find('input').first().focus().autocomplete({
-            select: function (event, ui) {
-                $(this).closest('form').find('input').last().removeAttr('disabled');
+        $container.find('#system-name').focus().autocomplete({
+            select: function(event, ui) {
+                $(this).closest('form').find('input:submit').removeAttr('disabled');
             },
-            source: function (request, response) {
+            source: function(request, response) {
                 var $input = this.element;
-                var $submit = $input.closest('form').find('input').last();
+                var $submit = $input.closest('form').find('input:submit');
                 $.ajax({
                     type: 'GET',
                     url: '/api/system/autocomplete/' + request.term + '/',
                     success: function(data) {
                         var dataArray = JSON.parse(data);
-                        if (dataArray.length == 1) {
+                        if(dataArray.length == 1) {
                             $input.val(dataArray[0]);
                             $submit.removeAttr('disabled');
                             response();
@@ -73,19 +133,20 @@ $(document).ready(function() {
         var $formDiv = $(this);
 
         var systemName = $formDiv.find('#system-name').val().trim();
-        if ($formDiv.find('input').last().attr('disabled') || systemName == '') {
+        if($formDiv.find('input:submit:disabled').length || systemName == '') {
             alert('A valid system name must be entered.');
-            return false;
+            return;
         }
 
         $.ajax({
             type: 'POST',
             url: '/api/system_node/',
-            data: {'author': 'xcron',
-                   'system': systemName,
-                   'page_name': $('select').val(),
-                   'parent_node': paper.getById($formDiv.attr('data-ellipse-id'))
-                                       .system.id},
+            data: {
+                'author': 'xcron',
+                'system': systemName,
+                'page_name': $('select').val(),
+                'parent_node': paper.getById($formDiv.attr('data-ellipse-id')).system.id
+            },
             success: function() {
                 window.location = '';
             },
@@ -95,7 +156,7 @@ $(document).ready(function() {
         });
     });
 
-    if (typeof(systemTree) != "undefined" && systemTree != null) {
+    if(typeof(systemTree) != "undefined" && systemTree != null) {
         var indentX = 180;
         var indentY = 64;
         paper = InitializeRaphael(indentX, indentY);
@@ -107,15 +168,15 @@ $(document).ready(function() {
         parentNode.x = 0;
         parentNode.y = 0;
         DrawSystem(paper, indentX, indentY, parentNode);
-        while (parentNode != null) {
-            if (childNode && !childNode.drawn) {
+        while(parentNode != null) {
+            if(childNode && !childNode.drawn) {
                 DrawSystem(paper, indentX, indentY, childNode);
                 childNode.drawn = true;
             }
 
-            if (parentNode.children.length) {
-                if (childNode) {
-                    if (childNode.children && childNode.children.length &&
+            if(parentNode.children.length) {
+                if(childNode) {
+                    if(childNode.children && childNode.children.length &&
                         !childNode.children[0].drawn) {
                         parentNode = childNode;
                         childNode = childNode.children[0];
@@ -124,11 +185,11 @@ $(document).ready(function() {
                         childNode.x = parentNode.x + 1;
                         childNode.y = parentNode.y;
                     }
-                    else if (childNode.index == (parentNode.children.length - 1) &&
+                    else if(childNode.index ==(parentNode.children.length - 1) &&
                              !parentNode.parent) {
                         parentNode = null;
                     }
-                    else if (childNode.index == (parentNode.children.length - 1) &&
+                    else if(childNode.index ==(parentNode.children.length - 1) &&
                              parentNode.parent) {
                         childNode = parentNode;
                         parentNode = parentNode.parent;
@@ -165,16 +226,16 @@ function InitializeRaphael(indentX, indentY) {
 }
 
 function DrawSystem(paper, indentX, indentY, system) {
-    if (system == null) return;
+    if(system == null) return;
 
     var sysX = GetSystemX(indentX, system);
     var sysY = GetSystemY(indentY, system);
 
     var sysName = system.name;
-    if (system.type != null && system.type.length > 0) sysName += "\n(" + system.type + ")";
+    if(system.type != null && system.type.length > 0) sysName += "\n(" + system.type + ")";
     var sysText;
 
-    if (system.x != null && system.x > 0) {
+    if(system.x != null && system.x > 0) {
         system.ellipse = paper.ellipse(sysX, sysY, 45, 28);
 
         sysText = paper.text(sysX, sysY, sysName);
@@ -201,17 +262,17 @@ function DrawSystem(paper, indentX, indentY, system) {
 }
 
 function GetSystemX(indentX, system) {
-    if (system) return 55 + indentX * system.x;
+    if(system) return 55 + indentX * system.x;
     else alert("system is null or undefined");
 }
 
 function GetSystemY(indentY, system) {
-    if (system) return 40 + indentY * system.y;
+    if(system) return 40 + indentY * system.y;
     else alert("system is null or undefined");
 }
 
 function ColorSystem(system, sysText) {
-    if (!system) {
+    if(!system) {
         alert("system is null or undefined");
         return;
     }
@@ -222,7 +283,7 @@ function ColorSystem(system, sysText) {
     var textFontSize = 12;
     var textColor = "#000";
 
-    if (system.x < 1) {
+    if(system.x < 1) {
         // root
         sysColor = "#A600A6";
         sysStroke = "#6A006A";
@@ -231,7 +292,7 @@ function ColorSystem(system, sysText) {
     }
     else {
         // not selected
-        switch (system.type) {
+        switch(system.type) {
             case "null":
                 sysColor = "#CC0000";
                 sysStroke = "#840000";
@@ -255,8 +316,8 @@ function ColorSystem(system, sysText) {
         }
     }
 
-    if (system.name.length > 16) textFontSize = 8;
-    else if (system.name.length > 11) textFontSize = 9;
+    if(system.name.length > 16) textFontSize = 8;
+    else if(system.name.length > 11) textFontSize = 9;
 
     system.ellipse.attr({fill: sysColor, stroke: sysStroke, "stroke-width": sysStrokeWidth, cursor: "pointer"});
     sysText.attr({fill: textColor, "font-size": textFontSize, cursor: "pointer"});
@@ -267,7 +328,7 @@ function ConnectSystems(paper, parentSystem, childSystem, lineColor) {
     var childBox = childSystem.ellipse.getBBox();
     var startY = parentBox.y + (parentBox.height / 2);
     var path;
-    if (parentSystem.y == childSystem.y)
+    if(parentSystem.y == childSystem.y)
         path = paper.path("M" + parentBox.x2 + "," + startY + "L" + childBox.x + "," + startY);
     else {
         var endY = childBox.y + (childBox.height / 2);
@@ -283,19 +344,19 @@ function ConnectSystems(paper, parentSystem, childSystem, lineColor) {
 
 function OnSysOver() {
     var ellipse;
-    if (this.type == 'ellipse') ellipse = this;
+    if(this.type == 'ellipse') ellipse = this;
     else ellipse = this.ellipse;
     var system = ellipse.system;
 
     ellipse.attr({"stroke-width": 4});
 
-    if (!system.$infoPanel && !system.$actionPanel) {
+    if(!system.$infoPanel && !system.$actionPanel) {
         var ellipseBox = ellipse.getBBox();
         system.$infoPanel = $('#stash .system-info').clone().appendTo('#systemsHolder');
         system.$infoPanel.css({'top': ellipseBox.y, 'left': ellipseBox.x2});
         system.$infoPanel.children('#system-info-author').append(system.author);
         system.$infoPanel.children('#system-info-date').append(system.date);
-        if (system.wspace_effect) {
+        if(system.wspace_effect) {
             var $effectDiv = system.$infoPanel.children('#system-info-wspace-effect');
             $effectDiv.append(system.wspace_effect);
             $effectDiv.css('display', 'block');
@@ -305,23 +366,23 @@ function OnSysOver() {
 
 function OnSysOut() {
     var ellipse;
-    if (this.type == 'ellipse') ellipse = this;
+    if(this.type == 'ellipse') ellipse = this;
     else ellipse = this.ellipse;
     var system = ellipse.system;
 
-    if (system.$infoPanel) {
+    if(system.$infoPanel) {
         ellipse.attr({"stroke-width": 2});
         system.$infoPanel.remove();
         system.$infoPanel = null;
     }
-    else if (!system.$actionPanel) {
+    else if(!system.$actionPanel) {
         ellipse.attr({"stroke-width": 2});
     }
 }
 
 function ClearSelection() {
-    paper.forEach(function (el) {
-        if (el.type == 'ellipse' && el.system.$actionPanel) {
+    paper.forEach(function(el) {
+        if(el.type == 'ellipse' && el.system.$actionPanel) {
             el.attr({"stroke-width": 2});
             el.system.$actionPanel.remove();
             el.system.$actionPanel = null;
@@ -331,11 +392,11 @@ function ClearSelection() {
 
 function OnSysDown(e) {
     var ellipse;
-    if (this.type == 'ellipse') ellipse = this;
+    if(this.type == 'ellipse') ellipse = this;
     else ellipse = this.ellipse;
     var system = ellipse.system;
 
-    if (system.$infoPanel) {
+    if(system.$infoPanel) {
         ClearSelection();
 
         var $stashActionPanel = $('#stash .system-actions');
@@ -345,7 +406,7 @@ function OnSysDown(e) {
         system.$actionPanel.attr('data-ellipse-id', ellipse.id);
         system.$actionPanel.html($stashActionPanel.html());
     }
-    else if (!system.$actionPanel) {
+    else if(!system.$actionPanel) {
         ClearSelection();
 
         var ellipseBox = ellipse.getBBox();

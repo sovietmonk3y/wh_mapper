@@ -36,7 +36,7 @@ class SystemNode(models.Model):
                      'type' : self.system.type,
                      'region' : self.system.region}
 
-        if not self.system.region:
+        if not self.system.region and self.system.wspace_effect:
             json_dict['wspace_effect'] = (
                 wmc.WSPACE_EFFECTS_HTML[self.system.wspace_effect] %
                 wmc.WSPACE_EFFECT_CLASSES[self.system.wspace_effect][self.system.type])

@@ -24,10 +24,28 @@
                 <option value="{{ map_page }}"{% if page and page == map_page %} selected="true"{% endif %}>{{ map_page }}</option>
             {% endfor %}
         </select>
+        <a id="create-page" href="">+ New Map</a>
         <br /><br />
         <div id="systemsHolder"></div> 
 
         <div id="stash">
+            <div class="new-page-form">
+                <br/>Define the new page:<br/>
+                <form>
+                    <table>
+                        <tr>
+                            <td>Page name:</td>
+                            <td><input id="page-name"></td>
+                        </tr>
+                        <tr>
+                            <td>Root system name:</td>
+                            <td><input id="system-name"></td>
+                        </tr>
+                        <tr><td></td><td><input type="submit" value="Submit"></td></tr>
+                    </table>
+                </form>
+            </div>
+
             <div class="system-info">
                 <div id="system-info-author">Author: </div>
                 <div id="system-info-date">Last modified: </div>

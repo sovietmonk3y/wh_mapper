@@ -9,7 +9,7 @@ class SystemNodeTestUtilities():
                                                      system_id='jita',
                                                      page_name='testpage')
         test_root_node.save()
-        return test_root_node.id
+        return test_root_node
 
 
 class SystemNodeCreateAPITestCase(TestCase):
@@ -22,10 +22,25 @@ class SystemNodeCreateAPITestCase(TestCase):
         system_node = wh_mapper_models.SystemNode.objects.get(**self.data)
         self.assertEqual(system_node.parent_node_id, None)
 
+    def test_create_root_node_same_page(self):
+        util = SystemNodeTestUtilities()
+        root_node = util.create_test_root_node()
+        data = self.data.copy()
+        data['system'] = 'vfk-iv'
+        data['page_name'] = root_node.page_name
+
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, 400)
+        try:
+            wh_mapper_models.SystemNode.objects.get(**data)
+            raise self.failureException('Root node object was created')
+        except:
+            pass
+
     def test_create_child_node(self):
         util = SystemNodeTestUtilities()
         data = self.data.copy()
-        data['parent_node'] = util.create_test_root_node()
+        data['parent_node'] = util.create_test_root_node().id
         response = self.client.post(self.url, data)
         self.assertEqual(response.status_code, 200)
         wh_mapper_models.SystemNode.objects.get(**data)
@@ -91,7 +106,7 @@ class SystemNodeDeleteAPITestCase(TestCase):
 
     def test_delete_root_node(self):
         util = SystemNodeTestUtilities()
-        test_root_node_id = util.create_test_root_node()
+        test_root_node_id = util.create_test_root_node().id
         response = self.client.delete(self.url + test_root_node_id + '/')
         self.assertEqual(response.status_code, 200)
         try:
@@ -102,8 +117,7 @@ class SystemNodeDeleteAPITestCase(TestCase):
 
     def test_delete_node_chain(self):
         util = SystemNodeTestUtilities()
-        test_root_node_id = util.create_test_root_node()
-        node = wh_mapper_models.SystemNode.objects.get(id=test_root_node_id)
+        node = util.create_test_root_node()
 
         node_id_list = []
         for i in range(5):
