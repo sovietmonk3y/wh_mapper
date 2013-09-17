@@ -99,12 +99,12 @@ class Migration(DataMigration):
         },
         u'wh_mapper.wormhole': {
             'Meta': {'object_name': 'Wormhole'},
-            'jump_mass': ('django.db.models.fields.IntegerField', [], {'max_length': '10'}),
-            'life': ('django.db.models.fields.IntegerField', [], {'max_length': '2'}),
-            'mass_regen': ('django.db.models.fields.IntegerField', [], {'max_length': '9'}),
+            'jump_mass': ('django.db.models.fields.PositiveIntegerField', [], {}),
+            'life': ('django.db.models.fields.PositiveSmallIntegerField', [], {}),
+            'mass_regen': ('django.db.models.fields.PositiveIntegerField', [], {}),
             'sig': ('django.db.models.fields.CharField', [], {'max_length': '4', 'primary_key': 'True'}),
             'static': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
-            'total_mass': ('django.db.models.fields.IntegerField', [], {'max_length': '10'}),
+            'total_mass': ('django.db.models.fields.BigIntegerField', [], {}),
             'type': ('django.db.models.fields.CharField', [], {'max_length': '4'})
         }
     }
