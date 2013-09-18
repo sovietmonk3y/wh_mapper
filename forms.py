@@ -4,7 +4,8 @@ import django.forms as forms
 import wh_mapper.models as wh_mapper_models
 
 class SystemNodeCreateForm(forms.ModelForm):
-    parent_node = forms.ModelChoiceField(queryset=wh_mapper_models.SystemNode.objects.all(), required=False)
+    parent_node = forms.ModelChoiceField(
+        queryset=wh_mapper_models.SystemNode.objects.all(), required=False)
     notes = forms.CharField(required=False)
 
     class Meta:
@@ -24,8 +25,8 @@ class SystemNodeCreateForm(forms.ModelForm):
                         parent_and_page_valid = True
                         break
                 if not parent_and_page_valid:
-                    raise ValidationError(
-                        'A parent node with such an id on such a page does not exist')
+                    raise ValidationError('A parent node with such an id on ' +
+                                          'such a page does not exist')
             else:
                 page_already_exists = False
                 for node in nodes:

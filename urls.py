@@ -4,6 +4,7 @@ from wh_mapper.api.system import SystemNameAutocompleteApi
 from wh_mapper.api.system_node import SystemNodeCreateAPI, SystemNodeDeleteAPI
 
 urlpatterns = patterns('wh_mapper.views',
+    (r'^login/?$', 'login'), #GET, POST
     (r'^$', 'system_map'), #GET
     (r'^(?P<page>[^/.]+)/?$', 'system_map'), #GET
 )

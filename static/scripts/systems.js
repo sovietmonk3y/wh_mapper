@@ -52,7 +52,6 @@ $(document).ready(function() {
             type: 'POST',
             url: '/api/system_node/',
             data: {
-                'author': 'xcron',
                 'system': systemName,
                 'page_name': pageName
             },
@@ -142,7 +141,6 @@ $(document).ready(function() {
             type: 'POST',
             url: '/api/system_node/',
             data: {
-                'author': 'xcron',
                 'system': systemName,
                 'page_name': $('select').val(),
                 'parent_node': paper.getById($formDiv.attr('data-ellipse-id')).system.id
