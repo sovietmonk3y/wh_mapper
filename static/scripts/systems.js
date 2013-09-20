@@ -64,97 +64,98 @@ $(document).ready(function() {
         });
     });
 
-    document.onclick = function(e) {
-        var tag_name = e.target.tagName.toLowerCase();
-        if(tag_name != 'ellipse' && tag_name != 'text' && tag_name != 'tspan' &&
-            tag_name != 'a' && !$(e.target).closest('form').length) {
-            ClearSelection();
-        }
-    };
+    if(typeof(systemTree) != "undefined" && systemTree != null && systemTreeLength) {
 
-    document.onkeydown = function(e) {
-        if(e.which == 27) ClearSelection();
-    };
+        document.onclick = function(e) {
+            var tag_name = e.target.tagName.toLowerCase();
+            if(tag_name != 'ellipse' && tag_name != 'text' && tag_name != 'tspan' &&
+               tag_name != 'a' && !$(e.target).closest('form').length) {
+                ClearSelection();
+            }
+        };
 
-    $('#systemsHolder').on('click', '#add-connection', function(e) {
-        e.preventDefault();
+        document.onkeydown = function(e) {
+            if(e.which == 27) ClearSelection();
+        };
 
-        var $stashConnectionForm = $('#stash .system-connection-form');
-        var $container = $(this).parent();
-        $container.html($stashConnectionForm.html());
-        $container.attr('class', $stashConnectionForm.attr('class'));
-        $container.find('#system-name').focus().autocomplete({
-            select: function(event, ui) {
-                $(this).closest('form').find('input:submit').removeAttr('disabled');
-            },
-            source: function(request, response) {
-                var $input = this.element;
-                var $submit = $input.closest('form').find('input:submit');
-                $.ajax({
-                    type: 'GET',
-                    url: '/api/system/autocomplete/' + request.term + '/',
-                    success: function(data) {
-                        var dataArray = JSON.parse(data);
-                        if(dataArray.length == 1) {
-                            $input.val(dataArray[0]);
-                            $submit.removeAttr('disabled');
-                            response();
+        $('#systemsHolder').on('click', '#add-connection', function(e) {
+            e.preventDefault();
+
+            var $stashConnectionForm = $('#stash .system-connection-form');
+            var $container = $(this).parent();
+            $container.html($stashConnectionForm.html());
+            $container.attr('class', $stashConnectionForm.attr('class'));
+            $container.find('#system-name').focus().autocomplete({
+                select: function(event, ui) {
+                    $(this).closest('form').find('input:submit').removeAttr('disabled');
+                },
+                source: function(request, response) {
+                    var $input = this.element;
+                    var $submit = $input.closest('form').find('input:submit');
+                    $.ajax({
+                        type: 'GET',
+                        url: '/api/system/autocomplete/' + request.term + '/',
+                        success: function(data) {
+                            var dataArray = JSON.parse(data);
+                            if(dataArray.length == 1) {
+                                $input.val(dataArray[0]);
+                                $submit.removeAttr('disabled');
+                                response();
+                            }
+                            else {
+                                $submit.attr('disabled', true);
+                                response(dataArray);
+                            }
                         }
-                        else {
-                            $submit.attr('disabled', true);
-                            response(dataArray);
-                        }
-                    }
-                });
-            }
+                    });
+                }
+            });
         });
-    });
 
-    $('#systemsHolder').on('click', '#delete-system', function(e) {
-        e.preventDefault();
+        $('#systemsHolder').on('click', '#delete-system', function(e) {
+            e.preventDefault();
 
-        $.ajax({
-            type: 'DELETE',
-            url: '/api/system_node/' +
-                 paper.getById($(this).parent().attr('data-ellipse-id')).system.id + '/',
-            success: function() {
-                window.location = '';
-            },
-            error: function(xhr) {
-                alert(xhr.responseText);
-            }
+            $.ajax({
+                type: 'DELETE',
+                url: '/api/system_node/' +
+                    paper.getById($(this).parent().attr('data-ellipse-id')).system.id + '/',
+                success: function() {
+                    window.location = '';
+                },
+                error: function(xhr) {
+                    alert(xhr.responseText);
+                }
+            });
         });
-    });
 
-    $('#systemsHolder').on('submit', '.system-connection-form', function(e) {
-        e.preventDefault();
+        $('#systemsHolder').on('submit', '.system-connection-form', function(e) {
+            e.preventDefault();
 
-        var $formDiv = $(this);
+            var $formDiv = $(this);
 
-        var systemName = $formDiv.find('#system-name').val().trim();
-        if($formDiv.find('input:submit:disabled').length || systemName == '') {
-            alert('A valid system name must be entered.');
-            return;
-        }
-
-        $.ajax({
-            type: 'POST',
-            url: '/api/system_node/',
-            data: {
-                'system': systemName,
-                'page_name': $('select').val(),
-                'parent_node': paper.getById($formDiv.attr('data-ellipse-id')).system.id
-            },
-            success: function() {
-                window.location = '';
-            },
-            error: function(xhr) {
-                alert(xhr.responseText);
+            var systemName = $formDiv.find('#system-name').val().trim();
+            if($formDiv.find('input:submit:disabled').length || systemName == '') {
+                alert('A valid system name must be entered.');
+                return;
             }
-        });
-    });
 
-    if(typeof(systemTree) != "undefined" && systemTree != null) {
+            $.ajax({
+                type: 'POST',
+                url: '/api/system_node/',
+                data: {
+                    'system': systemName,
+                    'page_name': $('select').val(),
+                    'parent_node': paper.getById($formDiv.attr('data-ellipse-id')).system.id
+                },
+                success: function() {
+                    window.location = '';
+                },
+                error: function(xhr) {
+                    alert(xhr.responseText);
+                }
+            });
+        });
+
         var indentX = 180;
         var indentY = 64;
         paper = InitializeRaphael(indentX, indentY);
