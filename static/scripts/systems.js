@@ -64,12 +64,14 @@ $(document).ready(function() {
         });
     });
 
-    if(typeof(systemTree) != "undefined" && systemTree != null && systemTreeLength) {
+    if(typeof(systemTree) != "undefined" && systemTree != null &&
+       systemTreeLength) {
 
         document.onclick = function(e) {
             var tag_name = e.target.tagName.toLowerCase();
-            if(tag_name != 'ellipse' && tag_name != 'text' && tag_name != 'tspan' &&
-               tag_name != 'a' && !$(e.target).closest('form').length) {
+            if(tag_name != 'ellipse' && tag_name != 'text' &&
+               tag_name != 'tspan' && tag_name != 'a' &&
+               !$(e.target).closest('form').length) {
                 ClearSelection();
             }
         };
@@ -87,7 +89,8 @@ $(document).ready(function() {
             $container.attr('class', $stashConnectionForm.attr('class'));
             $container.find('#system-name').focus().autocomplete({
                 select: function(event, ui) {
-                    $(this).closest('form').find('input:submit').removeAttr('disabled');
+                    $(this).closest('form').find('input:submit')
+                                           .removeAttr('disabled');
                 },
                 source: function(request, response) {
                     var $input = this.element;
@@ -118,7 +121,8 @@ $(document).ready(function() {
             $.ajax({
                 type: 'DELETE',
                 url: '/api/system_node/' +
-                    paper.getById($(this).parent().attr('data-ellipse-id')).system.id + '/',
+                    paper.getById($(this).parent().attr('data-ellipse-id'))
+                         .system.id + '/',
                 success: function() {
                     window.location = '';
                 },
@@ -128,13 +132,15 @@ $(document).ready(function() {
             });
         });
 
-        $('#systemsHolder').on('submit', '.system-connection-form', function(e) {
+        $('#systemsHolder').on('submit', '.system-connection-form',
+                               function(e) {
             e.preventDefault();
 
             var $formDiv = $(this);
 
             var systemName = $formDiv.find('#system-name').val().trim();
-            if($formDiv.find('input:submit:disabled').length || systemName == '') {
+            if($formDiv.find('input:submit:disabled').length ||
+               systemName == '') {
                 alert('A valid system name must be entered.');
                 return;
             }
@@ -145,7 +151,8 @@ $(document).ready(function() {
                 data: {
                     'system': systemName,
                     'page_name': $('select').val(),
-                    'parent_node': paper.getById($formDiv.attr('data-ellipse-id')).system.id
+                    'parent_node':
+                       paper.getById($formDiv.attr('data-ellipse-id')).system.id
                 },
                 success: function() {
                     window.location = '';
@@ -176,7 +183,7 @@ $(document).ready(function() {
             if(parentNode.children.length) {
                 if(childNode) {
                     if(childNode.children && childNode.children.length &&
-                        !childNode.children[0].drawn) {
+                       !childNode.children[0].drawn) {
                         parentNode = childNode;
                         childNode = childNode.children[0];
                         childNode.parent = parentNode;
@@ -184,20 +191,24 @@ $(document).ready(function() {
                         childNode.x = parentNode.x + 1;
                         childNode.y = parentNode.y;
                     }
-                    else if(childNode.index ==(parentNode.children.length - 1) &&
-                             !parentNode.parent) {
+                    else if(
+                        childNode.index == (parentNode.children.length - 1) &&
+                        !parentNode.parent) {
                         parentNode = null;
                     }
-                    else if(childNode.index ==(parentNode.children.length - 1) &&
-                             parentNode.parent) {
+                    else if(
+                        childNode.index == (parentNode.children.length - 1) &&
+                        parentNode.parent) {
                         childNode = parentNode;
                         parentNode = parentNode.parent;
                     }
                     else {
                         currentY++;
-                        parentNode.children[childNode.index + 1].index = childNode.index + 1;
+                        parentNode.children[childNode.index + 1].index =
+                            childNode.index + 1;
                         parentNode.children[childNode.index + 1].y = currentY;
-                        parentNode.children[childNode.index + 1].x = childNode.x;
+                        parentNode.children[childNode.index + 1].x =
+                            childNode.x;
                         childNode = parentNode.children[childNode.index + 1];
                         childNode.parent = parentNode;
                     }
@@ -215,6 +226,8 @@ $(document).ready(function() {
                 childNode = null;
             }
         }
+
+        GetUpdates();
     }
 });
 
@@ -231,23 +244,21 @@ function DrawSystem(paper, indentX, indentY, system) {
     var sysY = GetSystemY(indentY, system);
 
     var sysName = system.name;
-    if(system.type != null && system.type.length > 0) sysName += "\n(" + system.type + ")";
+    if(system.type != null && system.type.length > 0)
+        sysName += "\n(" + system.type + ")";
     var sysText;
 
     if(system.x != null && system.x > 0) {
         system.ellipse = paper.ellipse(sysX, sysY, 45, 28);
-
         sysText = paper.text(sysX, sysY, sysName);
-        sysText.ellipse = system.ellipse;
-
         ConnectSystems(paper, system.parent, system, "#825E48");
     }
     else {
         system.ellipse = paper.ellipse(sysX, sysY, 40, 30);
-
         sysText = paper.text(sysX, sysY, sysName);
-        sysText.ellipse = system.ellipse;
     }
+    system.ellipse.text = sysText;
+    sysText.ellipse = system.ellipse;
     system.ellipse.system = system;
 
     ColorSystem(system, sysText);
@@ -318,8 +329,10 @@ function ColorSystem(system, sysText) {
     if(system.name.length > 16) textFontSize = 8;
     else if(system.name.length > 11) textFontSize = 9;
 
-    system.ellipse.attr({fill: sysColor, stroke: sysStroke, "stroke-width": sysStrokeWidth, cursor: "pointer"});
-    sysText.attr({fill: textColor, "font-size": textFontSize, cursor: "pointer"});
+    system.ellipse.attr({'fill' : sysColor, 'stroke' : sysStroke,
+                        'stroke-width' : sysStrokeWidth, 'cursor' : "pointer"});
+    sysText.attr({'fill' : textColor, 'font-size' : textFontSize,
+                  'cursor' : "pointer"});
 }
 
 function ConnectSystems(paper, parentSystem, childSystem, lineColor) {
@@ -328,7 +341,8 @@ function ConnectSystems(paper, parentSystem, childSystem, lineColor) {
     var startY = parentBox.y + (parentBox.height / 2);
     var path;
     if(parentSystem.y == childSystem.y)
-        path = paper.path("M" + parentBox.x2 + "," + startY + "L" + childBox.x + "," + startY);
+        path = paper.path("M" + parentBox.x2 + "," + startY + "L" + childBox.x +
+                          "," + startY);
     else {
         var endY = childBox.y + (childBox.height / 2);
         var parentControlX = parentBox.x2 + ((childBox.x - parentBox.x2) / 2);
@@ -351,14 +365,21 @@ function OnSysOver() {
 
     if(!system.$infoPanel && !system.$actionPanel) {
         var ellipseBox = ellipse.getBBox();
-        system.$infoPanel = $('#stash .system-info').clone().appendTo('#systemsHolder');
+        system.$infoPanel = $('#stash .system-info').clone()
+                                                    .appendTo('#systemsHolder');
         system.$infoPanel.css({'top': ellipseBox.y, 'left': ellipseBox.x2});
         system.$infoPanel.children('#system-info-author').append(system.author);
         system.$infoPanel.children('#system-info-date').append(system.date);
         if(system.wspace_effect) {
-            var $effectDiv = system.$infoPanel.children('#system-info-wspace-effect');
+            var $effectDiv = system.$infoPanel
+                                   .children('#system-info-wspace-effect');
             $effectDiv.append(system.wspace_effect);
-            $effectDiv.css('display', 'block');
+            $effectDiv.removeAttr('hidden');
+        }
+        if(system.locked) {
+            var $lockDiv = system.$infoPanel.children('#system-info-lock');
+            $lockDiv.append(system.locked);
+            $lockDiv.removeAttr('hidden');
         }
     }
 }
@@ -370,33 +391,39 @@ function OnSysOut() {
     var system = ellipse.system;
 
     if(system.$infoPanel) {
-        ellipse.attr({"stroke-width": 2});
+        if(!system.locked) ellipse.attr({"stroke-width": 2});
         system.$infoPanel.remove();
         system.$infoPanel = null;
     }
     else if(!system.$actionPanel) {
-        ellipse.attr({"stroke-width": 2});
+        if(!system.locked) ellipse.attr({"stroke-width": 2});
     }
 }
 
-function ClearSelection() {
+function ClearSelection(softClear) {
     paper.forEach(function(el) {
         if(el.type == 'ellipse' && el.system.$actionPanel) {
+            if(!softClear) {
+                $.ajax({
+                    type: 'POST',
+                    url: '/lock_node/',
+                    data: {
+                        'node_id' : null,
+                        'page_name': $('select').val()
+                    }
+                });
+            }
             el.attr({"stroke-width": 2});
             el.system.$actionPanel.remove();
             el.system.$actionPanel = null;
+            return;
         }
     });
 }
 
-function OnSysDown(e) {
-    var ellipse;
-    if(this.type == 'ellipse') ellipse = this;
-    else ellipse = this.ellipse;
-    var system = ellipse.system;
-
+function ActivateNode(system, ellipse) {
     if(system.$infoPanel) {
-        ClearSelection();
+        ClearSelection(true);
 
         var $stashActionPanel = $('#stash .system-actions');
         system.$actionPanel = system.$infoPanel;
@@ -406,10 +433,114 @@ function OnSysDown(e) {
         system.$actionPanel.html($stashActionPanel.html());
     }
     else if(!system.$actionPanel) {
-        ClearSelection();
+        ClearSelection(true);
 
         var ellipseBox = ellipse.getBBox();
-        system.$actionPanel = $('#stash .system-actions').clone().appendTo('#systemsHolder');
+        system.$actionPanel = $('#stash .system-actions').clone()
+                              .appendTo('#systemsHolder');
         system.$actionPanel.css({'top': ellipseBox.y, 'left': ellipseBox.x2});
     }
+}
+
+function OnSysDown(e) {
+    var ellipse;
+    if(this.type == 'ellipse') ellipse = this;
+    else ellipse = this.ellipse;
+    var system = ellipse.system;
+
+    if(!system.locked && !system.$actionPanel) {
+        $.ajax({
+            type: 'POST',
+            url: '/lock_node/',
+            data: {
+                'node_id' : system.id,
+                'page_name': $('select').val()
+            },
+            success: function() {
+                ActivateNode(system, ellipse);
+            },
+            error: function(xhr, textStatus, errorThrown) {
+                alert(errorThrown);
+            }
+        });
+    }
+}
+
+function TraverseToNextNode(currentNode) {
+    if(!currentNode.parent)
+        return null;
+    else if(currentNode.index < (currentNode.parent.children.length - 1))
+        return currentNode.parent.children[currentNode.index + 1];
+    else
+        return currentNode.parent;
+}
+
+function LockNode(ellipse, username) {
+    var currentNode = ellipse.system;
+    currentNode.ellipse.attr({'stroke-width': 4, 'fill': 'gray'});
+    currentNode.locked = username;
+    if(currentNode.children) {
+        while(currentNode) {
+            if(currentNode.children && !currentNode.children[0].locked)
+                currentNode = currentNode.children[0];
+            else
+                currentNode = TraverseToNextNode(currentNode);
+            if(currentNode.id == ellipse.system.id) break;
+            if(!currentNode.locked) {
+                currentNode.ellipse.attr({'stroke-width': 4, 'fill': 'gray'});
+                currentNode.locked = username;
+            }
+        }
+    }
+}
+
+function UnlockNode(ellipse) {
+    var currentNode = ellipse.system;
+    ColorSystem(currentNode, currentNode.ellipse.text);
+    currentNode.locked = null;
+    if(currentNode.children) {
+        while(currentNode) {
+            if(currentNode.children && currentNode.children[0].locked)
+                currentNode = currentNode.children[0];
+            else
+                currentNode = TraverseToNextNode(currentNode);
+            if(currentNode.id == ellipse.system.id) break;
+            if(currentNode.locked) {
+                ColorSystem(currentNode, currentNode.ellipse.text);
+                currentNode.locked = null;
+            }
+        }
+    }
+}
+
+function GetUpdates() {
+    $.ajax({
+        type: "GET",
+        url: "/get_updates/" + $('select').val() + "/",
+        success: function(data) {
+            $('#user-list').html(data.user_list.join(', '));
+            if(data.node_lock) {
+                if(data.node_lock.username) {
+                    paper.forEach(function(el) {
+                        if(el.type == 'ellipse' && el.system.locked &&
+                           el.system.locked == data.node_lock.username)
+                            UnlockNode(el);
+                    });
+                }
+                paper.forEach(function(el) {
+                    if(el.type == 'ellipse' &&
+                       el.system.id == data.node_lock.node_id) {
+                        if(data.node_lock.username)
+                            LockNode(el, data.node_lock.username);
+                        else
+                            UnlockNode(el);
+                    }
+                });
+            }
+            window.setTimeout(GetUpdates, 0);
+        },
+        error: function(xhr, textStatus, errorThrown) {
+            alert(errorThrown);
+        }
+    });
 }

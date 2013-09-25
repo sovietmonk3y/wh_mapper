@@ -3,6 +3,7 @@ import json
 import django.contrib.auth as contrib_auth
 from django.http import HttpResponseRedirect, HttpResponseBadRequest
 from django.shortcuts import render_to_response
+from django.template.context import RequestContext
 
 import wh_mapper.models as wh_mapper_models
 
@@ -89,6 +90,7 @@ def system_map(request, page=None):
                          'page': page,
                          'map_pages': map_pages}
 
-        return render_to_response('map.html', template_vars)
+        return render_to_response('map.html', template_vars,
+                                  context_instance=RequestContext(request))
     else:
         return HttpResponseRedirect('/login/')

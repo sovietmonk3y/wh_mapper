@@ -8,20 +8,33 @@
             var systemTreeWidth = {{ system_tree_width }};
         </script>
 
-        <script type="text/javascript" src="{% static 'scripts/plugins/jquery-2.0.2.min.js' %}"></script>
-        <script type="text/javascript" src="{% static 'scripts/plugins/jquery-ui-1.10.3.custom.min.js' %}"></script>
-        <script type="text/javascript" src="{% static 'scripts/plugins/raphael-min.js' %}"></script>
-        <script type="text/javascript" src="{% static 'scripts/systems.js' %}"></script>
+        <script type="text/javascript"
+                src="{% static 'scripts/plugins/jquery-2.0.2.min.js' %}">
+        </script>
+        <script type="text/javascript" src=
+                "{% static 'scripts/plugins/jquery-ui-1.10.3.custom.min.js' %}">
+        </script>
+        <script type="text/javascript"
+                src="{% static 'scripts/plugins/raphael-min.js' %}">
+        </script>
+        <script type="text/javascript"
+                src="{% static 'scripts/systems.js' %}">
+        </script>
         <link rel="stylesheet" href="{% static 'styles/styles.css' %}"></link>
-        <link rel="stylesheet" href="{% static 'styles/jquery-ui-1.10.3.custom.min.css' %}"></link>
+        <link rel="stylesheet"
+              href="{% static 'styles/jquery-ui-1.10.3.custom.min.css' %}">
     </head>
 
     <body>
-        <br />Map page: 
+        Current users: <span id="user-list">{{ user.username }}</span><br/><br/>
+        Map page:
         <select>
             <option value=""></option>
             {% for map_page in map_pages %}
-                <option value="{{ map_page }}"{% if page and page == map_page %} selected="true"{% endif %}>{{ map_page }}</option>
+                <option value="{{ map_page }}"
+                    {% if page and page == map_page %}
+                        selected="true"
+                    {% endif %}>{{ map_page }}</option>
             {% endfor %}
         </select>
         <a id="create-page" href="">+ New Map</a>
@@ -41,7 +54,10 @@
                             <td>Root system name:</td>
                             <td><input id="system-name"></td>
                         </tr>
-                        <tr><td></td><td><input type="submit" value="Submit"></td></tr>
+                        <tr>
+                            <td></td>
+                            <td><input type="submit" value="Submit"></td>
+                        </tr>
                     </table>
                 </form>
             </div>
@@ -49,8 +65,11 @@
             <div class="system-info">
                 <div id="system-info-author">Author: </div>
                 <div id="system-info-date">Last modified: </div>
-                <div id="system-info-wspace-effect" style="display: none;">
+                <div id="system-info-wspace-effect" hidden="true">
                   <br/>Effects:<br/>
+                </div>
+                <div id="system-info-lock" hidden="true">
+                  <br/>LOCKED BY:<br/>
                 </div>
             </div>
 
@@ -66,7 +85,12 @@
                             <td>Name:</td>
                             <td><input id="system-name"></td>
                         </tr>
-                        <tr><td></td><td><input type="submit" value="Submit" disabled></td></tr>
+                        <tr>
+                            <td></td>
+                            <td>
+                                <input type="submit" value="Submit" disabled>
+                            </td>
+                        </tr>
                     </table>
                 </form>
             </div>
