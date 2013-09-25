@@ -26,7 +26,7 @@ class SystemNodeDeleteAPI(View):
     def delete(self, request, node_id):
         if request.user.is_authenticated():
             node_id_dict_list = (wh_mapper_models.SystemNode.objects
-                                                 .values('id', 'parent_node_id'))
+                                                .values('id', 'parent_node_id'))
 
             node_id_valid = False
             for node_id_dict in node_id_dict_list:
