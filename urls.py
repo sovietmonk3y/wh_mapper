@@ -16,5 +16,6 @@ urlpatterns += patterns('',
 
 urlpatterns += patterns('',
     (r'^api/system_node/$', SystemNodeCreateAPI.as_view()), #POST
-    (r'^api/system_node/(?P<node_id>[^/]+)/?$', SystemNodeDeleteAPI.as_view()), #DELETE
+    (r'^api/system_node/(?P<page_name>[^/]+)/(?P<node_id>[^/]+)/?$',
+        SystemNodeDeleteAPI.as_view()), #DELETE
 )

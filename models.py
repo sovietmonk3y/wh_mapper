@@ -49,7 +49,8 @@ class SystemNode(models.Model):
 
     def json_safe(self):
         json_dict = {'id' : self.id,
-                     'date' : str(self.date),
+                     'parent_node_id' : self.parent_node_id,
+                     'date' : self.date.strftime('%m/%d/%Y %H:%M:%S'),
                      'author' : self.author_username,
                      'name' : self.system.name,
                      'type' : self.system.type,

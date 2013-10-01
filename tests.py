@@ -122,7 +122,8 @@ class SystemNodeDeleteAPITestCase(TestCase):
         util = TestUtilities()
         test_root_node_id = util.create_test_root_node(self.data['system'],
             self.data['page_name']).id
-        response = self.client.delete(self.url + test_root_node_id + '/')
+        response = self.client.delete(self.url + self.data['page_name'] + '/' +
+                                      test_root_node_id + '/')
         self.assertNotEqual(response.status_code, 200)
         wh_mapper_models.SystemNode.objects.get(id=test_root_node_id)
 
@@ -130,8 +131,8 @@ class SystemNodeDeleteAPITestCase(TestCase):
         util = TestUtilities()
         test_root_node_id = util.create_test_root_node(self.data['system'],
             self.data['page_name']).id
-        response = util.get_logged_in_client().delete(self.url +
-                                                      test_root_node_id + '/')
+        response = util.get_logged_in_client().delete(
+            self.url + self.data['page_name'] + '/' + test_root_node_id + '/')
         self.assertEqual(response.status_code, 200)
         try:
             wh_mapper_models.SystemNode.objects.get(id=test_root_node_id)
@@ -152,15 +153,15 @@ class SystemNodeDeleteAPITestCase(TestCase):
             node.save()
             node_id_list.append(node.id)
 
-        response = util.get_logged_in_client().delete(self.url +
-                                                      node_id_list[0] + '/')
+        response = util.get_logged_in_client().delete(
+            self.url + self.data['page_name'] + '/' + node_id_list[0] + '/')
         self.assertEqual(response.status_code, 200)
         if wh_mapper_models.SystemNode.objects.filter(id__in=node_id_list):
             raise self.failureException('System node objects were not deleted')
 
     def test_delete_node_invalid_id(self):
         response = TestUtilities().get_logged_in_client().delete(
-            self.url + 'invalid id' + '/')
+            self.url + self.data['page_name'] + '/' + 'invalid id' + '/')
         self.assertEqual(response.status_code, 400)
 
 

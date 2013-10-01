@@ -3,9 +3,9 @@ import json
 import django.contrib.auth as contrib_auth
 from django.http import HttpResponseRedirect, HttpResponseBadRequest
 from django.shortcuts import render_to_response
-from django.template.context import RequestContext
 
 import wh_mapper.models as wh_mapper_models
+from wh_mapper.tornado_vars import node_locks, pulses
 
 def login(request):
     if request.user.is_authenticated():
@@ -26,8 +26,14 @@ def login(request):
 
 def system_map(request, page=None):
     if request.user.is_authenticated():
+        if page:
+            for page_name in node_locks:
+                if request.user.username in node_locks[page_name]:
+                    del node_locks[page_name][request.user.username]
+                    break
+
         nodes = (wh_mapper_models.SystemNode.objects.select_related('system')
-                                            .order_by('parent_node', 'date'))
+                                            .order_by('parent_node'))
         map_pages = set([node.page_name for node in nodes])
         if page:
             nodes = [node for node in nodes if node.page_name == page]
@@ -46,7 +52,6 @@ def system_map(request, page=None):
                     node_tree[node.id].update(node.json_safe())
 
                 if node.parent_node_id:
-                    node_tree[node.id]['parent_node_id'] = node.parent_node_id
                     if node_tree.has_key(node.parent_node_id):
                         node_tree[node.parent_node_id]['children'][node.id] = (
                             node.json_safe())
@@ -62,18 +67,21 @@ def system_map(request, page=None):
                 length = 0
 
                 while current_node:
-                    if current_node.has_key('parent_node_id'):
+                    if current_node['parent_node_id']:
                         current_parent_node_id = current_node['parent_node_id']
-                        if (node_tree.has_key(current_parent_node_id) and
-                            current_node['children']):
-                            (node_tree[current_parent_node_id]['children']
-                                      [current_node['id']]['children']) = (
-                                current_node['children'].values())
-                        if not (node_tree.has_key(current_parent_node_id) and
-                                current_node['children'] and
-                                set(current_node['children'].keys())
-                                    .intersection(set(node_tree.keys()))):
+
+                        if node_tree.has_key(current_parent_node_id):
+                            node_tree[current_parent_node_id]['children'][
+                                current_node['id']]['children'] = sorted(
+                                current_node['children'].values(),
+                                key=lambda x:x['date'])
+
+                        if (not node_tree.has_key(current_parent_node_id) or
+                            not current_node['children'] or
+                            not set(current_node['children'].keys())
+                                .intersection(node_tree.keys())):
                             del node_tree[current_node['id']]
+
                         current_node = node_tree.get(current_parent_node_id,
                                                      None)
                     else:
@@ -82,15 +90,22 @@ def system_map(request, page=None):
                     if length > node_tree_length: node_tree_length = length
 
             node_tree = node_tree.values()[0]
-            node_tree['children'] = node_tree['children'].values()
+            node_tree['children'] = sorted(node_tree['children'].values(),
+                                           key=lambda x:x['date'])
 
         template_vars = {'system_tree': json.dumps(node_tree),
                          'system_tree_length': node_tree_length,
                          'system_tree_width': node_tree_width,
                          'page': page,
-                         'map_pages': map_pages}
+                         'map_pages': map_pages,
+                         'user_list': list(set([user for pulse_page in pulses
+                                                for user in pulses[pulse_page]])
+                                           .union([request.user.username])),
+                         'node_locks': json.dumps([
+                             {'node_id' : node_locks[page][username],
+                              'username' : username}
+                             for username in node_locks.get(page, {})])}
 
-        return render_to_response('map.html', template_vars,
-                                  context_instance=RequestContext(request))
+        return render_to_response('map.html', template_vars)
     else:
         return HttpResponseRedirect('/login/')

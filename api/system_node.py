@@ -1,9 +1,12 @@
+import json
+
 from django.http import HttpResponse, HttpResponseBadRequest,\
                         HttpResponseRedirect
 from django.views.generic.base import View
 
 import wh_mapper.forms as wh_mapper_forms
 import wh_mapper.models as wh_mapper_models
+from wh_mapper.tornado_vars import node_locks, pulses
 
 class SystemNodeCreateAPI(View):
 
@@ -13,8 +16,32 @@ class SystemNodeCreateAPI(View):
             data['author'] = request.user.username
             create_form = wh_mapper_forms.SystemNodeCreateForm(data)
             if create_form.is_valid():
-                create_form.save()
-                return HttpResponse()
+                new_node = create_form.save()
+                node_json = new_node.json_safe()
+
+                if new_node.page_name in pulses:
+                    del node_locks[new_node.page_name][request.user.username]
+                    update_data = {'node_lock' :
+                                       {'username' : None,
+                                        'node_id' : new_node.parent_node_id},
+                                   'new_node' : node_json}
+                    update_data['new_node']['children'] = []
+                    for user in pulses[new_node.page_name]:
+                        if user != request.user.username:
+                            send_update = (
+                                pulses[new_node.page_name][user].callback)
+                            send_update(**update_data)
+                else:
+                    pulses[new_node.page_name] = {}
+                    node_locks[new_node.page_name] = {}
+                    for update_timeout in [
+                        pulses[page][user] for page in pulses
+                        for user in pulses[page]
+                        if user != request.user.username]:
+                        send_update = update_timeout.callback
+                        send_update(new_page=new_node.page_name)
+
+                return HttpResponse(json.dumps(node_json))
             else:
                 return HttpResponseBadRequest(create_form.errors.as_text())
         else:
@@ -23,10 +50,14 @@ class SystemNodeCreateAPI(View):
 
 class SystemNodeDeleteAPI(View):
 
-    def delete(self, request, node_id):
+    def delete(self, request, page_name, node_id):
         if request.user.is_authenticated():
-            node_id_dict_list = (wh_mapper_models.SystemNode.objects
-                                                .values('id', 'parent_node_id'))
+            node_id_dict_list = wh_mapper_models.SystemNode.objects.filter(
+                page_name=page_name).order_by('parent_node').values(
+                'id', 'parent_node_id')
+
+            if not node_id_dict_list:
+                return HttpResponseBadRequest('Invalid page')
 
             node_id_valid = False
             for node_id_dict in node_id_dict_list:
@@ -34,7 +65,7 @@ class SystemNodeDeleteAPI(View):
                     node_id_valid = True
                     break
             if not node_id_valid:
-                return HttpResponseBadRequest('Invalid system ID')
+                return HttpResponseBadRequest('Invalid node ID')
 
             node_delete_id_list = [node_id]
             current_level_id_list = node_delete_id_list
@@ -46,8 +77,28 @@ class SystemNodeDeleteAPI(View):
                 if current_level_id_list:
                     node_delete_id_list.extend(current_level_id_list)
 
+            if len(set(node_delete_id_list).intersection(
+                    node_locks[page_name].values())) > 1:
+                return HttpResponseBadRequest(
+                    'Cannot delete a node whose descendant is currently locked')
+
             wh_mapper_models.SystemNode.objects.filter(
                 id__in=node_delete_id_list).delete()
+
+            if node_id_dict_list[0]['id'] == node_id:
+                del node_locks[page_name]
+                for update_timeout in [pulses[page][user] for page in pulses
+                                       for user in pulses[page]
+                                       if user != request.user.username]:
+                    send_update = update_timeout.callback
+                    send_update(delete_page=page_name)
+                del pulses[page_name]
+            elif page_name in pulses:
+                del node_locks[page_name][request.user.username]
+                for user in pulses[page_name]:
+                    if user != request.user.username:
+                        send_update = pulses[page_name][user].callback
+                        send_update(delete_node=node_id)
 
             return HttpResponse()
         else:

@@ -6,6 +6,7 @@
             var systemTree = {{ system_tree|safe }};
             var systemTreeLength = {{ system_tree_length }};
             var systemTreeWidth = {{ system_tree_width }};
+            var nodeLocks = {{ node_locks|safe }};
         </script>
 
         <script type="text/javascript"
@@ -26,7 +27,12 @@
     </head>
 
     <body>
-        Current users: <span id="user-list">{{ user.username }}</span><br/><br/>
+        Current users:
+        <span id="user-list">
+            {% for user in user_list %}
+                {{ user }}{% if not forloop.last %}, {% endif %}
+            {% endfor %}
+        </span><br/><br/>
         Map page:
         <select>
             <option value=""></option>

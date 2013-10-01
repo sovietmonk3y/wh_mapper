@@ -1,8 +1,15 @@
-﻿var paper;
+var paper;
+var indentX = 180;
+var indentY = 64;
+var CANVAS_HEIGHT_PADDING = 80;
+var CANVAS_WIDTH_PADDING = 110;
 
 $(document).ready(function() {
     $('select').on('change', function() {
-        if(this.value) window.location = '/' + this.value;
+        if(this.value) {
+            ClearSelection();
+            window.location = '/' + this.value;
+        }
     });
 
     $('#create-page').on('click', function(e) {
@@ -64,8 +71,7 @@ $(document).ready(function() {
         });
     });
 
-    if(typeof(systemTree) != "undefined" && systemTree != null &&
-       systemTreeLength) {
+    if(typeof(systemTree) != 'undefined' && systemTree && systemTreeLength) {
 
         document.onclick = function(e) {
             var tag_name = e.target.tagName.toLowerCase();
@@ -118,13 +124,19 @@ $(document).ready(function() {
         $('#systemsHolder').on('click', '#delete-system', function(e) {
             e.preventDefault();
 
+            var nodeID = paper.getById($(this).parent().attr('data-ellipse-id'))
+                              .system.id;
             $.ajax({
                 type: 'DELETE',
                 url: '/api/system_node/' +
-                    paper.getById($(this).parent().attr('data-ellipse-id'))
-                         .system.id + '/',
+                     window.location.pathname.split('/')[1] + '/' + nodeID +
+                     '/',
                 success: function() {
-                    window.location = '';
+                    if(nodeID == systemTree.id) window.location = '/';
+                    else {
+                        ClearSelection(true);
+                        DeleteNode(nodeID);
+                    }
                 },
                 error: function(xhr) {
                     alert(xhr.responseText);
@@ -150,12 +162,13 @@ $(document).ready(function() {
                 url: '/api/system_node/',
                 data: {
                     'system': systemName,
-                    'page_name': $('select').val(),
+                    'page_name': window.location.pathname.split('/')[1],
                     'parent_node':
                        paper.getById($formDiv.attr('data-ellipse-id')).system.id
                 },
-                success: function() {
-                    window.location = '';
+                success: function(data) {
+                    ClearSelection(true);
+                    AddNode(JSON.parse(data));
                 },
                 error: function(xhr) {
                     alert(xhr.responseText);
@@ -163,9 +176,7 @@ $(document).ready(function() {
             });
         });
 
-        var indentX = 180;
-        var indentY = 64;
-        paper = InitializeRaphael(indentX, indentY);
+        paper = Raphael('systemsHolder', getCanvasWidth(), getCanvasHeight());
 
         var currentY = 0;
         var parentNode = systemTree;
@@ -182,7 +193,7 @@ $(document).ready(function() {
 
             if(parentNode.children.length) {
                 if(childNode) {
-                    if(childNode.children && childNode.children.length &&
+                    if(childNode.children.length &&
                        !childNode.children[0].drawn) {
                         parentNode = childNode;
                         childNode = childNode.children[0];
@@ -227,14 +238,28 @@ $(document).ready(function() {
             }
         }
 
-        GetUpdates();
+        if(nodeLocks) {
+            nodeLocks.forEach(function(nodeLock) {
+                paper.forEach(function(el) {
+                    if(el.type == 'ellipse' &&
+                       el.system.id == nodeLock.node_id) {
+                        LockNode(el, nodeLock.username);
+                        return;
+                    }
+                });
+            });
+        }
     }
+
+    GetUpdates();
 });
 
-function InitializeRaphael(indentX, indentY) {
-    var canvasHeight = 80 + ((systemTreeWidth - 1) * indentY);
-    var canvasWidth = 110 + ((systemTreeLength - 1) * indentX);
-    return Raphael('systemsHolder', canvasWidth, canvasHeight);
+function getCanvasWidth() {
+    return CANVAS_WIDTH_PADDING + ((systemTreeLength - 1) * indentX);
+}
+
+function getCanvasHeight() {
+    return CANVAS_HEIGHT_PADDING + ((systemTreeWidth - 1) * indentY);
 }
 
 function DrawSystem(paper, indentX, indentY, system) {
@@ -353,6 +378,7 @@ function ConnectSystems(paper, parentSystem, childSystem, lineColor) {
                           childBox.x + "," + endY);
     }
     path.attr({stroke: lineColor});
+    childSystem.ellipse.pathToParent = path;
 }
 
 function OnSysOver() {
@@ -409,7 +435,7 @@ function ClearSelection(softClear) {
                     url: '/lock_node/',
                     data: {
                         'node_id' : null,
-                        'page_name': $('select').val()
+                        'page_name': window.location.pathname.split('/')[1]
                     }
                 });
             }
@@ -454,7 +480,7 @@ function OnSysDown(e) {
             url: '/lock_node/',
             data: {
                 'node_id' : system.id,
-                'page_name': $('select').val()
+                'page_name': window.location.pathname.split('/')[1]
             },
             success: function() {
                 ActivateNode(system, ellipse);
@@ -468,7 +494,7 @@ function OnSysDown(e) {
 
 function TraverseToNextNode(currentNode) {
     if(!currentNode.parent)
-        return null;
+        return currentNode;
     else if(currentNode.index < (currentNode.parent.children.length - 1))
         return currentNode.parent.children[currentNode.index + 1];
     else
@@ -479,9 +505,9 @@ function LockNode(ellipse, username) {
     var currentNode = ellipse.system;
     currentNode.ellipse.attr({'stroke-width': 4, 'fill': 'gray'});
     currentNode.locked = username;
-    if(currentNode.children) {
+    if(currentNode.children.length) {
         while(currentNode) {
-            if(currentNode.children && !currentNode.children[0].locked)
+            if(currentNode.children.length && !currentNode.children[0].locked)
                 currentNode = currentNode.children[0];
             else
                 currentNode = TraverseToNextNode(currentNode);
@@ -496,16 +522,17 @@ function LockNode(ellipse, username) {
 
 function UnlockNode(ellipse) {
     var currentNode = ellipse.system;
+    var locker = currentNode.locked;
     ColorSystem(currentNode, currentNode.ellipse.text);
     currentNode.locked = null;
-    if(currentNode.children) {
+    if(currentNode.children.length) {
         while(currentNode) {
-            if(currentNode.children && currentNode.children[0].locked)
+            if(currentNode.children.length && currentNode.children[0].locked)
                 currentNode = currentNode.children[0];
             else
                 currentNode = TraverseToNextNode(currentNode);
             if(currentNode.id == ellipse.system.id) break;
-            if(currentNode.locked) {
+            if(currentNode.locked && currentNode.locked == locker) {
                 ColorSystem(currentNode, currentNode.ellipse.text);
                 currentNode.locked = null;
             }
@@ -513,10 +540,176 @@ function UnlockNode(ellipse) {
     }
 }
 
+function AddNode(node) {
+    paper.forEach(function(elem) {
+        if(elem.type == 'ellipse' && elem.system.id == node.parent_node_id) {
+            node.parent = elem.system;
+            node.x = elem.system.x + 1;
+            if(elem.system.children.length) {
+                systemTreeWidth++;
+                paper.setSize(paper.width, getCanvasHeight());
+
+                var nodeChainY = elem.system.children[
+                    elem.system.children.length - 1].y;
+                var currentNode = elem.system;
+                while(currentNode) {
+                    if(currentNode.y > nodeChainY) nodeChainY = currentNode.y;
+                    if(currentNode.children.length)
+                        currentNode = currentNode.children[
+                            currentNode.children.length - 1];
+                    else currentNode = null;
+                }
+                node.y = nodeChainY + 1;
+
+                paper.forEach(function(el) {
+                    if(el.type == 'ellipse' && el.system.y >= node.y) {
+                        el.system.y++;
+                        el.transform('...t0,' + indentY);
+                        el.text.transform('...t0,' + indentY);
+                        if(el.system.x < node.x &&
+                           el.system.parent.y < node.y &&
+                           el.pathToParent.attrs.path[1][0] == 'C') {
+                            el.pathToParent.attrs.path[1][4] =
+                                el.pathToParent.attrs.path[1][4] + indentY;
+                            el.pathToParent.attrs.path[1][6] =
+                                el.pathToParent.attrs.path[1][6] + indentY;
+                            el.pathToParent.attr('path',
+                                el.pathToParent.attrs.path[0].join() +
+                                el.pathToParent.attrs.path[1].join());
+                        }
+                        else el.pathToParent.transform('...t0,' + indentY);
+                    }
+                });
+            }
+            else {
+                var distanceToRoot = 0;
+                var currentNode = elem.system;
+                while(currentNode) {
+                    currentNode = currentNode.parent;
+                    distanceToRoot++;
+                }
+                if(distanceToRoot == systemTreeLength) {
+                    systemTreeLength++;
+                    paper.setSize(getCanvasWidth(), paper.height);
+                }
+                node.y = elem.system.y;
+            }
+            node.index = node.parent.children.length;
+            elem.system.children.push(node);
+            DrawSystem(paper, indentX, indentY, node);
+
+            return;
+        }
+    });
+}
+
+function DeleteNode(nodeID) {
+    paper.forEach(function(el) {
+        if(el.type == 'ellipse' && el.system.id == nodeID) {
+            var currentNode = el.system;
+            var nodeChainWidth = 1;
+            while(currentNode) {
+                if(currentNode.children.length)
+                    currentNode = currentNode.children[0];
+                else {
+                    if((currentNode.y - el.system.y + 1) > nodeChainWidth)
+                        nodeChainWidth = currentNode.y - el.system.y + 1;
+
+                    currentNode.ellipse.pathToParent.remove();
+                    currentNode.ellipse.text.remove();
+                    currentNode.ellipse.remove();
+
+                    if(currentNode.id == nodeID) {
+                        if(currentNode.y == currentNode.parent.y &&
+                           currentNode.parent.children.length == 1)
+                            nodeChainWidth--;
+
+                        for(var i = currentNode.index + 1;
+                            i < currentNode.parent.children.length; i++) {
+                            currentNode.parent.children[i].index--;
+                        }
+                        currentNode.parent.children.splice(currentNode.index,
+                                                           1);
+
+                        if(nodeChainWidth) {
+                            paper.forEach(function(elem) {
+                                if(elem.type == 'ellipse' &&
+                                   elem.system.y > currentNode.y) {
+                                    if((elem.system.x < currentNode.x ||
+                                           (elem.system.x == currentNode.x &&
+                                               elem.system.parent.id ==
+                                               currentNode.parent.id)) &&
+                                       elem.system.parent.y <= currentNode.y &&
+                                       elem.pathToParent.attrs.path[1][0] ==
+                                       'C') {
+                                        if(elem.system.index) {
+                                            elem.pathToParent.attrs.path[1][4] =
+                                                elem.pathToParent.attrs
+                                                    .path[1][4] -
+                                                (indentY * nodeChainWidth);
+                                            elem.pathToParent.attrs.path[1][6] =
+                                                elem.pathToParent.attrs
+                                                    .path[1][6] -
+                                                (indentY * nodeChainWidth);
+                                            elem.pathToParent.attr('path',
+                                                elem.pathToParent.attrs.path[0]
+                                                    .join() +
+                                                elem.pathToParent.attrs.path[1]
+                                                    .join());
+                                        }
+                                        else {
+                                            elem.pathToParent.attr('path',
+                                                elem.pathToParent.attrs.path[0]
+                                                    .join() +
+                                                'L' + elem.pathToParent.attrs
+                                                          .path[1][5] +
+                                                ',' + elem.pathToParent.attrs
+                                                          .path[0][2]);
+                                        }
+                                    }
+                                    else
+                                        elem.pathToParent.transform('...t0,-' +
+                                            (indentY * nodeChainWidth));
+
+                                    elem.system.y -= nodeChainWidth;
+                                    elem.transform('...t0,-' +
+                                        (indentY * nodeChainWidth));
+                                    elem.text.transform('...t0,-' +
+                                        (indentY * nodeChainWidth));
+                                }
+                            });
+                        }
+
+                        currentNode = null;
+                    }
+                    else {
+                        currentNode = currentNode.parent;
+                        currentNode.children.splice(0,1);
+                    }
+                }
+            }
+
+            return;
+        }
+    });
+
+    var maxX = 0;
+    var maxY = 0;
+    paper.forEach(function(el) {
+        if(el.type == 'ellipse') {
+            if(el.system.x > maxX) maxX = el.system.x;
+            if(el.system.y > maxY) maxY = el.system.y;
+        }
+    });
+    if(maxX < (systemTreeLength - 1)) systemTreeLength = maxX + 1;
+    if(maxY < (systemTreeWidth - 1)) systemTreeWidth = maxY + 1;
+    paper.setSize(getCanvasWidth(), getCanvasHeight());
+}
+
 function GetUpdates() {
     $.ajax({
         type: "GET",
-        url: "/get_updates/" + $('select').val() + "/",
+        url: "/get_updates/" + window.location.pathname.split('/')[1] + "/",
         success: function(data) {
             $('#user-list').html(data.user_list.join(', '));
             if(data.node_lock) {
@@ -537,6 +730,23 @@ function GetUpdates() {
                     }
                 });
             }
+            if(data.new_page) {
+                $('select').append('<option value="' + data.new_page + '">' +
+                                   data.new_page + '</option>');
+            }
+            else if(data.delete_page) {
+                if(window.location.pathname == ('/' + data.delete_page)) {
+                    window.location = '/';
+                    return;
+                }
+                else
+                    $('select').find('option[value="' + data.delete_page + '"]')
+                               .remove();
+            }
+            else if(data.new_node)
+                AddNode(data.new_node);
+            else if(data.delete_node)
+                DeleteNode(data.delete_node);
             window.setTimeout(GetUpdates, 0);
         },
         error: function(xhr, textStatus, errorThrown) {

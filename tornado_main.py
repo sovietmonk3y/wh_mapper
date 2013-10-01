@@ -18,12 +18,10 @@ from tornado.wsgi import WSGIContainer
 
 import wh_mapper.forms as wh_mapper_forms
 import wh_mapper.models as wh_mapper_models
-
-#user_list = set()
-node_locks = {}
-pulses = {}
+from wh_mapper.tornado_vars import node_locks, pulses
 
 #USE CACHING...
+pulses[''] = {}
 for page_name in (wh_mapper_models.SystemNode.objects.all()
                                           .values_list('page_name', flat=True)):
     node_locks[page_name] = {}
@@ -37,30 +35,44 @@ def store_django_user(request_handler):
 
 
 class UpdatesAPI(tornado_web.RequestHandler):
-    def send_update(self, node_lock=None):
+    @tornado_web.asynchronous
+    def send_update(self, node_lock=None, new_page=None, new_node=None,
+                    delete_page=None, delete_node=None):
+        if (self.page_name in pulses and
+            self.user.username in pulses[self.page_name]):
+            IOLoop.instance().remove_timeout(
+                pulses[self.page_name][self.user.username])
+        else:
+            return
+
         if self.request.connection.stream.closed():
-            print "FINISHING A CONNECTION"
             del pulses[self.page_name][self.user.username]
         else:
             data = {'user_list' :
                 list(set([user for page in pulses for user in pulses[page]]))}
             if node_lock: data.update({'node_lock' : node_lock})
+            if new_page: data.update({'new_page' : new_page})
+            elif new_node: data.update({'new_node' : new_node})
+            elif delete_page: data.update({'delete_page' : delete_page})
+            elif delete_node: data.update({'delete_node' : delete_node})
             self.finish(data)
 
+    @tornado_web.asynchronous
     def send_update_timeout(self):
         ioloop = IOLoop.instance()
-        if self.user.username in pulses[self.page_name]:
-            ioloop.remove_timeout(pulses[self.page_name][self.user.username])
+        for page in pulses:
+            if self.user.username in pulses[page]:
+                ioloop.remove_timeout(pulses[page][self.user.username])
+                del pulses[page][self.user.username]
+                break
         pulses[self.page_name][self.user.username] = ioloop.add_timeout(
-            timedelta(seconds=5), self.send_update)
+            timedelta(seconds=30), self.send_update)
 
     @tornado_web.asynchronous
     def get(self, page_name):
         store_django_user(self)
         if self.user.is_authenticated():
-            #USE CACHING HERE
-            if page_name in (wh_mapper_models.SystemNode.objects.all()
-                                          .values_list('page_name', flat=True)):
+            if page_name in pulses:
                 self.page_name = page_name
                 IOLoop.instance().add_callback(self.send_update_timeout)
             else:
@@ -87,14 +99,10 @@ class SystemNodeLockAPI(tornado_web.RequestHandler):
                             self.finish()
                             node_id = node_locks[page_name][self.user.username]
                             del node_locks[page_name][self.user.username]
-                            print ('BROADCASTING RELEASE OF NODE LOCK TO ALL ' +
-                                   'USERS')
                             for user in pulses[page_name]:
                                 if user != self.user.username:
                                     send_update = (
                                         pulses[page_name][user].callback)
-                                    IOLoop.instance().remove_timeout(
-                                        pulses[page_name][user])
                                     send_update(node_lock={'username' : None,
                                                            'node_id' : node_id})
                         else:
@@ -113,12 +121,9 @@ class SystemNodeLockAPI(tornado_web.RequestHandler):
                     else:
                         node_locks[page_name][self.user.username] = node_id
                         self.finish()
-                        print 'BROADCASTING NODE LOCK TO ALL USERS'
                         for user in pulses[page_name]:
                             if user != self.user.username:
                                 send_update = pulses[page_name][user].callback
-                                IOLoop.instance().remove_timeout(
-                                    pulses[page_name][user])
                                 send_update(node_lock={
                                         'username' : self.user.username,
                                         'node_id' : node_id})
@@ -136,7 +141,7 @@ if __name__ == '__main__':
     wsgi_app = WSGIContainer(django_wsgi.WSGIHandler())
     tornado_web.Application(
         [
-            (r'/get_updates/([^/]+)/', UpdatesAPI),
+            (r'/get_updates/([^/]*)/', UpdatesAPI),
             (r'/lock_node/', SystemNodeLockAPI),
             (r'.*', tornado_web.FallbackHandler, dict(fallback=wsgi_app))
         ],
