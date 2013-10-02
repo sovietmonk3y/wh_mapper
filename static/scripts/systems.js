@@ -7,7 +7,7 @@ var CANVAS_WIDTH_PADDING = 110;
 $(document).ready(function() {
     $('select').on('change', function() {
         if(this.value) {
-            ClearSelection();
+            if(paper) ClearSelection();
             window.location = '/' + this.value;
         }
     });
