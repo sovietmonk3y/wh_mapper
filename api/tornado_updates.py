@@ -21,11 +21,11 @@ class UpdatesAPI(tornado_web.RequestHandler):
         else:
             data = {'user_list' :
                 list(set([user for page in pulses for user in pulses[page]]))}
-            if node_lock: data.update({'node_lock' : node_lock})
-            if new_page: data.update({'new_page' : new_page})
-            elif new_node: data.update({'new_node' : new_node})
-            elif delete_page: data.update({'delete_page' : delete_page})
-            elif delete_node: data.update({'delete_node' : delete_node})
+            if node_lock: data.update(node_lock=node_lock)
+            if new_page: data.update(new_page=new_page)
+            elif new_node: data.update(new_node=new_node)
+            elif delete_page: data.update(delete_page=delete_page)
+            elif delete_node: data.update(delete_node=delete_node)
             self.finish(data)
 
     def send_update_timeout(self):

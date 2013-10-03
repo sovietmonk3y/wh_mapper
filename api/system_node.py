@@ -19,6 +19,7 @@ class SystemNodeCreateAPI(View):
             if create_form.is_valid():
                 new_node = create_form.save()
                 node_json = new_node.json_safe()
+                node_json['children'] = []
 
                 if new_node.page_name in pulses:
                     del node_locks[new_node.page_name][request.user.username]
@@ -26,7 +27,6 @@ class SystemNodeCreateAPI(View):
                                        {'username' : None,
                                         'node_id' : new_node.parent_node_id},
                                    'new_node' : node_json}
-                    update_data['new_node']['children'] = []
                     for user in pulses[new_node.page_name]:
                         if user != request.user.username:
                             send_update = (

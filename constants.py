@@ -1,6 +1,6 @@
 USERNAME_MAX_LENGTH = 10
 
-NODE_ID_MAX_LENGTH = 32
+MAP_OBJECT_ID_MAX_LENGTH = 32
 
 SYSTEM_NODE_PAGE_NAME_MAX_LENGTH = 10
 SYSTEM_NODE_NOTES_MAX_LENGTH = 1000
@@ -120,3 +120,15 @@ WSPACE_EFFECT_CLASSES = {
 SYSTEM_NAME_AUTOCOMPLETE_MAX_RESULTS = 10
 
 WORMHOLE_SIG_MAX_LENGTH = 4
+WORMHOLE_LIFE_LEVELS = (
+    (0, "Life cycle has not begun"),
+    (1, "Probably won't last another day"),
+    (2, "Reaching the end of its natural lifetime")
+)
+WORMHOLE_MASS_LEVELS = (
+    (0, "Not significantly disrupted"),
+    (1, "Reduced, but not critical"),
+    (2, "Critical; verge of collapse")
+)
+WORMHOLE_LIFE_PERCENTAGES = [100,25]
+WORMHOLE_MASS_PERCENTAGES = [50,10]

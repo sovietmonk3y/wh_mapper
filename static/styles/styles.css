@@ -6,7 +6,7 @@
     position: relative;
 }
 
-.system-info, .system-actions, .system-connection-form {
+.system-info, .system-actions, .new-system-form, .new-connection-form {
     border: 1px solid #80ADC1;
 
     border-radius: 10px;

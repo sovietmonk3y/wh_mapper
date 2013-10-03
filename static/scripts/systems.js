@@ -3,6 +3,12 @@ var indentX = 180;
 var indentY = 64;
 var CANVAS_HEIGHT_PADDING = 80;
 var CANVAS_WIDTH_PADDING = 110;
+var ROOT_ELLIPSE_RX = 40;
+var ROOT_ELLIPSE_RY = 30;
+var NON_ROOT_ELLIPSE_RX = 45;
+var NON_ROOT_ELLIPSE_RY = 28;
+var SYSTEM_CONNECTION_LINE_COLOR = "#825E48";
+var SYSTEM_PLACEHOLDER_NAME = 'XXX';
 
 $(document).ready(function() {
     $('select').on('change', function() {
@@ -86,13 +92,13 @@ $(document).ready(function() {
             if(e.which == 27) ClearSelection();
         };
 
-        $('#systemsHolder').on('click', '#add-connection', function(e) {
+        $('#systemsHolder').on('click', '#add-system', function(e) {
             e.preventDefault();
 
-            var $stashConnectionForm = $('#stash .system-connection-form');
+            var $stashSystemForm = $('#stash .new-system-form');
             var $container = $(this).parent();
-            $container.html($stashConnectionForm.html());
-            $container.attr('class', $stashConnectionForm.attr('class'));
+            $container.html($stashSystemForm.html());
+            $container.attr('class', $stashSystemForm.attr('class'));
             $container.find('#system-name').focus().autocomplete({
                 select: function(event, ui) {
                     $(this).closest('form').find('input:submit')
@@ -121,6 +127,16 @@ $(document).ready(function() {
             });
         });
 
+        $('#systemsHolder').on('click', '#add-connection', function(e) {
+            e.preventDefault();
+
+            var $stashConnectionForm = $('#stash .new-connection-form');
+            var $container = $(this).parent();
+            $container.html($stashConnectionForm.html());
+            $container.attr('class', $stashConnectionForm.attr('class'));
+            $container.find('#wormhole-sig').focus();
+        });
+
         $('#systemsHolder').on('click', '#delete-system', function(e) {
             e.preventDefault();
 
@@ -144,8 +160,7 @@ $(document).ready(function() {
             });
         });
 
-        $('#systemsHolder').on('submit', '.system-connection-form',
-                               function(e) {
+        $('#systemsHolder').on('submit', '.new-system-form', function(e) {
             e.preventDefault();
 
             var $formDiv = $(this);
@@ -163,8 +178,56 @@ $(document).ready(function() {
                 data: {
                     'system': systemName,
                     'page_name': window.location.pathname.split('/')[1],
-                    'parent_node':
-                       paper.getById($formDiv.attr('data-ellipse-id')).system.id
+                    'parent_node': paper.getById(
+                        $formDiv.attr('data-ellipse-id')).system.id
+                },
+                success: function(data) {
+                    ClearSelection(true);
+                    AddNode(JSON.parse(data));
+                },
+                error: function(xhr) {
+                    alert(xhr.responseText);
+                }
+            });
+        });
+
+        $('#systemsHolder').on('submit', '.new-connection-form', function(e) {
+            e.preventDefault();
+
+            var $formDiv = $(this);
+
+            var wormholeSig = $formDiv.find('#wormhole-sig').val().trim();
+            if(wormholeSig == '' || wormholeSig.length != WORMHOLE_SIG_LENGTH) {
+                alert('A valid wormhole sig must be entered.');
+                return;
+            }
+
+            var $lifeLevel = $formDiv.find('#life-level:checked');
+            if(!$lifeLevel.length) {
+                alert('A life level must be selected.');
+                return;
+            }
+
+            var $massLevel = $formDiv.find('#mass-level:checked');
+            if(!$massLevel.length) {
+                alert('A mass level must be selected.');
+                return;
+            }
+
+            $.ajax({
+                type: 'POST',
+                url: '/api/system_connection/',
+                data: {
+                    'wormhole': wormholeSig,
+                    'parent_celestial':
+                        $formDiv.find('#origin-celestial').val().trim(),
+                    'child_celestial':
+                        $formDiv.find('#destination-celestial').val().trim(),
+                    'life_level': $lifeLevel.val(),
+                    'mass_level': $massLevel.val(),
+                    'parent_node': paper.getById(
+                        $formDiv.attr('data-ellipse-id')).system.id,
+                    'page_name': window.location.pathname.split('/')[1]
                 },
                 success: function(data) {
                     ClearSelection(true);
@@ -265,35 +328,40 @@ function getCanvasHeight() {
 function DrawSystem(paper, indentX, indentY, system) {
     if(system == null) return;
 
-    var sysX = GetSystemX(indentX, system);
-    var sysY = GetSystemY(indentY, system);
+    var systemX = GetSystemX(indentX, system);
+    var systemY = GetSystemY(indentY, system);
 
-    var sysName = system.name;
-    if(system.type != null && system.type.length > 0)
-        sysName += "\n(" + system.type + ")";
-    var sysText;
+    var systemName = system.name;
+    if(!systemName) systemName = SYSTEM_PLACEHOLDER_NAME;
 
-    if(system.x != null && system.x > 0) {
-        system.ellipse = paper.ellipse(sysX, sysY, 45, 28);
-        sysText = paper.text(sysX, sysY, sysName);
-        ConnectSystems(paper, system.parent, system, "#825E48");
+    if(system.type && system.type.length > 0)
+        systemName += "\n(" + system.type + ")";
+
+    var systemText;
+    if(system.x > 0) {
+        system.ellipse = paper.ellipse(systemX, systemY, NON_ROOT_ELLIPSE_RX,
+                                       NON_ROOT_ELLIPSE_RY);
+        systemText = paper.text(systemX, systemY, systemName);
+        ConnectSystems(paper, system.parent, system,
+                       SYSTEM_CONNECTION_LINE_COLOR);
     }
     else {
-        system.ellipse = paper.ellipse(sysX, sysY, 40, 30);
-        sysText = paper.text(sysX, sysY, sysName);
+        system.ellipse = paper.ellipse(systemX, systemY, ROOT_ELLIPSE_RX,
+                                       ROOT_ELLIPSE_RY);
+        systemText = paper.text(systemX, systemY, systemName);
     }
-    system.ellipse.text = sysText;
-    sysText.ellipse = system.ellipse;
+    system.ellipse.text = systemText;
+    systemText.ellipse = system.ellipse;
     system.ellipse.system = system;
 
-    ColorSystem(system, sysText);
+    ColorSystem(system, systemText);
 
     system.ellipse.mouseover(OnSysOver);
     system.ellipse.mouseout(OnSysOut);
     system.ellipse.mousedown(OnSysDown);
-    sysText.mouseover(OnSysOver);
-    sysText.mouseout(OnSysOut);
-    sysText.mousedown(OnSysDown);
+    systemText.mouseover(OnSysOver);
+    systemText.mouseout(OnSysOut);
+    systemText.mousedown(OnSysDown);
 }
 
 function GetSystemX(indentX, system) {
@@ -351,8 +419,10 @@ function ColorSystem(system, sysText) {
         }
     }
 
-    if(system.name.length > 16) textFontSize = 8;
-    else if(system.name.length > 11) textFontSize = 9;
+    if(system.name) {
+        if(system.name.length > 16) textFontSize = 8;
+        else if(system.name.length > 11) textFontSize = 9;
+    }
 
     system.ellipse.attr({'fill' : sysColor, 'stroke' : sysStroke,
                         'stroke-width' : sysStrokeWidth, 'cursor' : "pointer"});
@@ -379,6 +449,7 @@ function ConnectSystems(paper, parentSystem, childSystem, lineColor) {
     }
     path.attr({stroke: lineColor});
     childSystem.ellipse.pathToParent = path;
+    childSystem.ellipse.pathToParent.connection = childSystem.parent_connection;
 }
 
 function OnSysOver() {

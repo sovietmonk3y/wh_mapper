@@ -7,6 +7,9 @@
             var systemTreeLength = {{ system_tree_length }};
             var systemTreeWidth = {{ system_tree_width }};
             var nodeLocks = {{ node_locks|safe }};
+            var WORMHOLE_SIG_LENGTH = {{ WORMHOLE_SIG_LENGTH }};
+            var WORMHOLE_LIFE_PERCENTAGES = {{ WORMHOLE_LIFE_PERCENTAGES }};
+            var WORMHOLE_MASS_PERCENTAGES = {{ WORMHOLE_MASS_PERCENTAGES }};
         </script>
 
         <script type="text/javascript"
@@ -80,11 +83,12 @@
             </div>
 
             <div class="system-actions">
-                <a id="add-connection" href="">Add connection</a><br/>
+                <a id="add-system" href="">Add system</a><br/>
+                <a id="add-connection" href="">Add connection</a><br/><br/><br/>
                 <a id="delete-system" href="">Delete system</a>
             </div>
 
-            <div class="system-connection-form">
+            <div class="new-system-form">
                 <form>
                     <table>
                         <tr>
@@ -95,6 +99,57 @@
                             <td></td>
                             <td>
                                 <input type="submit" value="Submit" disabled>
+                            </td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+
+            <div class="new-connection-form">
+                <form>
+                    <table>
+                        <tr>
+                            <td>Wormhole Sig:</td>
+                            <td><input id="wormhole-sig"></td>
+                        </tr>
+                        <tr>
+                            <td>Origin Celestial:</td>
+                            <td>P<input id="origin-celestial"></td>
+                        </tr>
+                        <tr>
+                            <td>Destination Celestial:</td>
+                            <td>P<input id="destination-celestial"></td>
+                        </tr>
+                        <tr>
+                            <td>Life Level:</td>
+                        </tr>
+                        {% for level in WORMHOLE_LIFE_LEVELS %}
+                            <tr>
+                                <td></td>
+                                <td>
+                                    <input type="radio" name="life-level"
+                                           id="life-level"
+                                           value="{{ level.0 }}">{{ level.1 }}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        <tr>
+                            <td>Mass Level:</td>
+                        </tr>
+                        {% for level in WORMHOLE_MASS_LEVELS %}
+                            <tr>
+                                <td></td>
+                                <td>
+                                    <input type="radio" name="mass-level"
+                                           id="mass-level"
+                                           value="{{ level.0 }}">{{ level.1 }}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        <tr>
+                            <td></td>
+                            <td>
+                                <input type="submit" value="Submit">
                             </td>
                         </tr>
                     </table>

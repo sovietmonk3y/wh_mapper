@@ -4,6 +4,7 @@ import django.contrib.auth as contrib_auth
 from django.http import HttpResponseRedirect, HttpResponseBadRequest
 from django.shortcuts import render_to_response
 
+import wh_mapper.constants as constants
 import wh_mapper.models as wh_mapper_models
 from wh_mapper.tornado_vars import node_locks, pulses
 
@@ -32,8 +33,8 @@ def system_map(request, page=None):
                     del node_locks[page_name][request.user.username]
                     break
 
-        nodes = (wh_mapper_models.SystemNode.objects.select_related('system')
-                                            .order_by('parent_node'))
+        nodes = wh_mapper_models.SystemNode.objects.select_related(
+            'system', 'parent_connection__wormhole').order_by('parent_node')
         map_pages = set([node.page_name for node in nodes])
         if page:
             nodes = [node for node in nodes if node.page_name == page]
@@ -54,10 +55,10 @@ def system_map(request, page=None):
                 if node.parent_node_id:
                     if node_tree.has_key(node.parent_node_id):
                         node_tree[node.parent_node_id]['children'][node.id] = (
-                            node.json_safe())
+                            node_tree[node.id].copy())
                     else:
-                        node_tree[node.parent_node_id] = (
-                            {'children' : {node.id : node.json_safe()}})
+                        node_tree[node.parent_node_id] = {
+                            'children' : {node.id : node_tree[node.id].copy()}}
 
             endpoint_id_list = [node_id for node_id in node_tree
                                 if node_tree[node_id]['children'] == {}]
@@ -104,7 +105,17 @@ def system_map(request, page=None):
                          'node_locks': json.dumps([
                              {'node_id' : node_locks[page][username],
                               'username' : username}
-                             for username in node_locks.get(page, {})])}
+                             for username in node_locks.get(page, {})]),
+                         'WORMHOLE_SIG_LENGTH' :
+                             constants.WORMHOLE_SIG_MAX_LENGTH,
+                         'WORMHOLE_LIFE_LEVELS' :
+                             constants.WORMHOLE_LIFE_LEVELS,
+                         'WORMHOLE_MASS_LEVELS' :
+                             constants.WORMHOLE_MASS_LEVELS,
+                         'WORMHOLE_LIFE_PERCENTAGES' :
+                             constants.WORMHOLE_LIFE_PERCENTAGES,
+                         'WORMHOLE_MASS_PERCENTAGES' :
+                             constants.WORMHOLE_MASS_PERCENTAGES}
 
         return render_to_response('map.html', template_vars)
     else:

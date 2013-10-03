@@ -5,13 +5,15 @@ from wh_mapper.constants import SYSTEM_NODE_PAGE_NAME_MAX_LENGTH
 import wh_mapper.models as wh_mapper_models
 
 class SystemNodeCreateForm(forms.ModelForm):
+    system = forms.ModelChoiceField(required=False,
+        queryset=wh_mapper_models.System.objects.all())
     parent_node = forms.ModelChoiceField(required=False,
         queryset=wh_mapper_models.SystemNode.objects.all())
     notes = forms.CharField(required=False)
 
     class Meta:
         model = wh_mapper_models.SystemNode
-        exclude = ['id', 'date']
+        exclude = ['id', 'date', 'parent_connection']
 
     def clean(self):
         if 'system' in self.errors:
@@ -44,6 +46,24 @@ class SystemNodeCreateForm(forms.ModelForm):
         self.fields['parent_node'].queryset._result_cache = None
 
         data = super(SystemNodeCreateForm, self).clean()
+        return data
+
+
+class SystemConnectionCreateForm(forms.ModelForm):
+    parent_celestial = forms.IntegerField(min_value=0, max_value=20,
+                                          required=False)
+    child_celestial = forms.IntegerField(min_value=0, max_value=20,
+                                         required=False)
+
+    class Meta:
+        model = wh_mapper_models.SystemConnection
+        exclude = ['id', 'date', 'facing_down']
+
+    def clean(self):
+        if 'wormhole' in self.errors:
+            self.errors['wormhole'] = ['That is not a valid wormhole']
+
+        data = super(SystemConnectionCreateForm, self).clean()
         return data
 
 
