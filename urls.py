@@ -2,7 +2,7 @@ from django.conf.urls import patterns, url
 
 from wh_mapper.api.system import SystemNameAutocompleteApi
 from wh_mapper.api.system_connection import SystemConnectionCreateAPI
-from wh_mapper.api.system_node import SystemNodeCreateAPI, SystemNodeDeleteAPI
+import wh_mapper.api.system_node as system_node_api
 
 urlpatterns = patterns('wh_mapper.views',
     (r'^login/?$', 'login'), #GET, POST
@@ -17,7 +17,9 @@ urlpatterns += patterns('',
 
 urlpatterns += patterns('',
     (r'^api/system_connection/$', SystemConnectionCreateAPI.as_view()), #POST
-    (r'^api/system_node/$', SystemNodeCreateAPI.as_view()), #POST
+
+    (r'^api/system_node/$',
+        system_node_api.SystemNodeCreateAPI.as_view()), #POST
     (r'^api/system_node/(?P<page_name>[^/]+)/(?P<node_id>[^/]+)/?$',
-        SystemNodeDeleteAPI.as_view()), #DELETE
+        system_node_api.SystemNodeEditAPI.as_view()), #PUT, DELETE
 )

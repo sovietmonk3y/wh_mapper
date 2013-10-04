@@ -52,13 +52,50 @@ class SystemNodeCreateAPI(View):
             return django_http.HttpResponseRedirect('/login/')
 
 
-class SystemNodeDeleteAPI(View):
+class SystemNodeEditAPI(View):
 
+    def put(self, request, page_name, node_id):
+        if request.user.is_authenticated():
+            node = None
+            try:
+                node = wh_mapper_models.SystemNode.objects.get(
+                    id=node_id, page_name=page_name)
+            except wh_mapper_models.SystemNode.DoesNotExist:
+                return django_http.HttpResponseBadRequest(
+                    'System node does not exist')
+
+            data = django_http.request.QueryDict(request.body).copy()
+            data['author'] = request.user.username
+            edit_form = wh_mapper_forms.SystemNodeEditForm(data, instance=node)
+            if edit_form.is_valid():
+                edit_form.instance.date = None
+                node = edit_form.save()
+                node_json = node.json_safe()
+
+                del node_locks[page_name][request.user.username]
+                update_data = {'node_lock' :
+                                   {'username' : None, 'node_id' : node_id},
+                               'update_node' : node_json}
+                for user in pulses[page_name]:
+                    if user != request.user.username:
+                        send_update = (
+                            pulses[page_name][user].callback)
+                        IOLoop.instance().add_callback(send_update,
+                            **update_data)
+
+                return django_http.HttpResponse(json.dumps(node_json))
+            else:
+                return django_http.HttpResponseBadRequest(
+                    edit_form.errors.as_text())
+        else:
+            return django_http.HttpResponseRedirect('/login/')
+
+    #@transaction.atomic -------- ADD THIS IN DJANGO 1.6
     def delete(self, request, page_name, node_id):
         if request.user.is_authenticated():
             node_id_dict_list = wh_mapper_models.SystemNode.objects.filter(
                 page_name=page_name).order_by('parent_node').values(
-                'id', 'parent_node_id')
+                'id', 'parent_node_id', 'parent_connection_id')
 
             if not node_id_dict_list:
                 return django_http.HttpResponseBadRequest('Invalid page')
@@ -86,8 +123,15 @@ class SystemNodeDeleteAPI(View):
                 return django_http.HttpResponseBadRequest(
                     'Cannot delete a node whose descendant is currently locked')
 
+            connection_id_list = [id_dict['parent_connection_id'] for id_dict in
+                                  node_id_dict_list if id_dict['id'] in
+                                  node_delete_id_list]
+
             wh_mapper_models.SystemNode.objects.filter(
                 id__in=node_delete_id_list).delete()
+
+            wh_mapper_models.SystemConnection.objects.filter(
+                id__in=connection_id_list).delete()
 
             if node_id_dict_list[0]['id'] == node_id:
                 del node_locks[page_name]

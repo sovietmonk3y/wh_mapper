@@ -18,6 +18,7 @@ class SystemNodeCreateForm(forms.ModelForm):
     def clean(self):
         if 'system' in self.errors:
             self.errors['system'] = ['That is not a valid system']
+            return self.cleaned_data
         elif not self.errors:
             nodes = self.fields['parent_node'].queryset
             if self.data.has_key('parent_node') and self.data['parent_node']:
@@ -40,13 +41,32 @@ class SystemNodeCreateForm(forms.ModelForm):
                     raise ValidationError(
                         "Can't create a root node on a pre-existing page")
 
-        #Necessary to properly clear the queryset cache after each use
-        #The caching was breaking tests due to unexpected behavior
-        #Refer to Django ticket 18272 and that there was no fix made
-        self.fields['parent_node'].queryset._result_cache = None
+            #Necessary to properly clear the queryset cache after each use
+            #The caching was breaking tests due to unexpected behavior
+            #Refer to Django ticket 18272 and that there was no fix made
+            self.fields['parent_node'].queryset._result_cache = None
 
-        data = super(SystemNodeCreateForm, self).clean()
-        return data
+            data = super(SystemNodeCreateForm, self).clean()
+            return data
+
+
+class SystemNodeEditForm(forms.ModelForm):
+    system = forms.ModelChoiceField(required=False,
+        queryset=wh_mapper_models.System.objects.all())
+    notes = forms.CharField(required=False)
+
+    class Meta:
+        model = wh_mapper_models.SystemNode
+        exclude = ['id', 'date', 'page_name', 'parent_node',
+                   'parent_connection']
+
+    def clean(self):
+        if 'system' in self.errors:
+            self.errors['system'] = ['That is not a valid system']
+            return self.cleaned_data
+        elif not self.errors:
+            data = super(SystemNodeEditForm, self).clean()
+            return data
 
 
 class SystemConnectionCreateForm(forms.ModelForm):
@@ -62,9 +82,10 @@ class SystemConnectionCreateForm(forms.ModelForm):
     def clean(self):
         if 'wormhole' in self.errors:
             self.errors['wormhole'] = ['That is not a valid wormhole']
-
-        data = super(SystemConnectionCreateForm, self).clean()
-        return data
+            return self.cleaned_data
+        else:
+            data = super(SystemConnectionCreateForm, self).clean()
+            return data
 
 
 class NodeLockCreateForm(forms.Form):

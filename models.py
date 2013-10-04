@@ -3,6 +3,7 @@ import uuid
 
 from django.contrib.auth.models import User
 from django.db import models
+import django.utils.html as django_html
 
 import wh_mapper.constants as wmc
 
@@ -101,7 +102,9 @@ class SystemNode(MapObject):
 
     def json_safe(self):
         json_dict = super(SystemNode, self).json_safe()
-        json_dict.update(parent_node_id=self.parent_node_id)
+        json_dict.update(parent_node_id=self.parent_node_id,
+                         notes_text=self.notes,
+                         notes_html=django_html.linebreaks(self.notes))
 
         if self.system:
             json_dict.update(name=self.system.name, type=self.system.type,

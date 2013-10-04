@@ -6,7 +6,8 @@
     position: relative;
 }
 
-.system-info, .system-actions, .new-system-form, .new-connection-form {
+.system-info, .system-actions, .new-system-form, .edit-system-form,
+.new-connection-form {
     border: 1px solid #80ADC1;
 
     border-radius: 10px;

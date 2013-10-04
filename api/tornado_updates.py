@@ -8,7 +8,7 @@ from wh_mapper.tornado_vars import pulses
 
 class UpdatesAPI(tornado_web.RequestHandler):
     def send_update(self, node_lock=None, new_page=None, new_node=None,
-                    delete_page=None, delete_node=None):
+                    delete_page=None, delete_node=None, update_node=None):
         if (self.page_name in pulses and
             self.user.username in pulses[self.page_name]):
             IOLoop.instance().remove_timeout(
@@ -26,6 +26,7 @@ class UpdatesAPI(tornado_web.RequestHandler):
             elif new_node: data.update(new_node=new_node)
             elif delete_page: data.update(delete_page=delete_page)
             elif delete_node: data.update(delete_node=delete_node)
+            elif update_node: data.update(update_node=update_node)
             self.finish(data)
 
     def send_update_timeout(self):

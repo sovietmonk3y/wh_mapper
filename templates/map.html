@@ -77,12 +77,16 @@
                 <div id="system-info-wspace-effect" hidden="true">
                   <br/>Effects:<br/>
                 </div>
+                <div id="system-info-notes" hidden="true">
+                  <br/><br/>Notes:
+                </div>
                 <div id="system-info-lock" hidden="true">
                   <br/>LOCKED BY:<br/>
                 </div>
             </div>
 
             <div class="system-actions">
+                <a id="edit-system" href="">Edit system</a><br/><br/><br/>
                 <a id="add-system" href="">Add system</a><br/>
                 <a id="add-connection" href="">Add connection</a><br/><br/><br/>
                 <a id="delete-system" href="">Delete system</a>
@@ -100,6 +104,25 @@
                             <td>
                                 <input type="submit" value="Submit" disabled>
                             </td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+
+            <div class="edit-system-form">
+                <form>
+                    <table>
+                        <tr>
+                            <td>Name:</td>
+                            <td><input id="system-name"></td>
+                        </tr>
+                        <tr>
+                            <td>Notes:</td>
+                            <td><textarea id="system-notes"></textarea></td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td><input type="submit" value="Submit"></td>
                         </tr>
                     </table>
                 </form>

@@ -92,11 +92,9 @@ $(document).ready(function() {
             if(e.which == 27) ClearSelection();
         };
 
-        $('#systemsHolder').on('click', '#add-system', function(e) {
-            e.preventDefault();
-
-            var $stashSystemForm = $('#stash .new-system-form');
-            var $container = $(this).parent();
+        function ReplaceActionPanelSystemAction(link, formClass) {
+            var $stashSystemForm = $('#stash .' + formClass);
+            var $container = $(link).parent();
             $container.html($stashSystemForm.html());
             $container.attr('class', $stashSystemForm.attr('class'));
             $container.find('#system-name').focus().autocomplete({
@@ -125,6 +123,21 @@ $(document).ready(function() {
                     });
                 }
             });
+        }
+
+        $('#systemsHolder').on('click', '#add-system', function(e) {
+            e.preventDefault();
+            ReplaceActionPanelSystemAction(this, 'new-system-form');
+        });
+
+        $('#systemsHolder').on('click', '#edit-system', function(e) {
+            e.preventDefault();
+            var $container = $(this).parent();
+            ReplaceActionPanelSystemAction(this, 'edit-system-form');
+            var system = paper.getById($container.attr('data-ellipse-id'))
+                              .system;
+            $container.find('#system-name').val(system.name);
+            $container.find('#system-notes').val(system.notes_text);
         });
 
         $('#systemsHolder').on('click', '#add-connection', function(e) {
@@ -184,6 +197,38 @@ $(document).ready(function() {
                 success: function(data) {
                     ClearSelection(true);
                     AddNode(JSON.parse(data));
+                },
+                error: function(xhr) {
+                    alert(xhr.responseText);
+                }
+            });
+        });
+
+        $('#systemsHolder').on('submit', '.edit-system-form', function(e) {
+            e.preventDefault();
+
+            var $formDiv = $(this);
+
+            var systemName = $formDiv.find('#system-name').val().trim();
+            if($formDiv.find('input:submit:disabled').length ||
+               systemName == '') {
+                alert('A valid system name must be entered.');
+                return;
+            }
+
+            $.ajax({
+                type: 'PUT',
+                url: '/api/system_node/' +
+                     window.location.pathname.split('/')[1] + '/' +
+                     paper.getById($formDiv.attr('data-ellipse-id')).system.id +
+                     '/',
+                data: {
+                    'system': systemName,
+                    'notes': $formDiv.find('#system-notes').val()
+                },
+                success: function(data) {
+                    ClearSelection(true);
+                    UpdateNode(JSON.parse(data));
                 },
                 error: function(xhr) {
                     alert(xhr.responseText);
@@ -447,7 +492,7 @@ function ConnectSystems(paper, parentSystem, childSystem, lineColor) {
                           childControlX + "," + endY + "," +
                           childBox.x + "," + endY);
     }
-    path.attr({stroke: lineColor});
+    path.attr('stroke', lineColor);
     childSystem.ellipse.pathToParent = path;
     childSystem.ellipse.pathToParent.connection = childSystem.parent_connection;
 }
@@ -458,7 +503,7 @@ function OnSysOver() {
     else ellipse = this.ellipse;
     var system = ellipse.system;
 
-    ellipse.attr({"stroke-width": 4});
+    ellipse.attr('stroke-width', 4);
 
     if(!system.$infoPanel && !system.$actionPanel) {
         var ellipseBox = ellipse.getBBox();
@@ -467,17 +512,18 @@ function OnSysOver() {
         system.$infoPanel.css({'top': ellipseBox.y, 'left': ellipseBox.x2});
         system.$infoPanel.children('#system-info-author').append(system.author);
         system.$infoPanel.children('#system-info-date').append(system.date);
-        if(system.wspace_effect) {
-            var $effectDiv = system.$infoPanel
-                                   .children('#system-info-wspace-effect');
-            $effectDiv.append(system.wspace_effect);
-            $effectDiv.removeAttr('hidden');
-        }
-        if(system.locked) {
-            var $lockDiv = system.$infoPanel.children('#system-info-lock');
-            $lockDiv.append(system.locked);
-            $lockDiv.removeAttr('hidden');
-        }
+        if(system.wspace_effect)
+            system.$infoPanel.children('#system-info-wspace-effect')
+                             .append(system.wspace_effect)
+                             .removeAttr('hidden');
+        if(system.notes_html)
+            system.$infoPanel.children('#system-info-notes')
+                             .append(system.notes_html)
+                             .removeAttr('hidden');
+        if(system.locked)
+            system.$infoPanel.children('#system-info-lock')
+                             .append(system.locked)
+                             .removeAttr('hidden');
     }
 }
 
@@ -488,12 +534,12 @@ function OnSysOut() {
     var system = ellipse.system;
 
     if(system.$infoPanel) {
-        if(!system.locked) ellipse.attr({"stroke-width": 2});
+        if(!system.locked) ellipse.attr('stroke-width', 2);
         system.$infoPanel.remove();
         system.$infoPanel = null;
     }
     else if(!system.$actionPanel) {
-        if(!system.locked) ellipse.attr({"stroke-width": 2});
+        if(!system.locked) ellipse.attr('stroke-width', 2);
     }
 }
 
@@ -510,7 +556,7 @@ function ClearSelection(softClear) {
                     }
                 });
             }
-            el.attr({"stroke-width": 2});
+            el.attr('stroke-width', 2);
             el.system.$actionPanel.remove();
             el.system.$actionPanel = null;
             return;
@@ -777,6 +823,27 @@ function DeleteNode(nodeID) {
     paper.setSize(getCanvasWidth(), getCanvasHeight());
 }
 
+function UpdateNode(node) {
+    paper.forEach(function(el) {
+        if(el.type == 'ellipse' && el.system.id == node.id) {
+            el.system.author = node.author;
+            el.system.date = node.date;
+            if(el.system.name != node.name) {
+                el.system.name = node.name;
+                el.text.attr('text', node.name + '\n(' + node.type + ')');
+                if(el.system.type != node.type) {
+                    el.system.type = node.type;
+                    ColorSystem(el.system, el.text);
+                }
+                el.system.region = node.region;
+            }
+            el.system.notes_text = node.notes_text;
+            el.system.notes_html = node.notes_html;
+            return;
+        }
+    });
+}
+
 function GetUpdates() {
     $.ajax({
         type: "GET",
@@ -818,6 +885,9 @@ function GetUpdates() {
                 AddNode(data.new_node);
             else if(data.delete_node)
                 DeleteNode(data.delete_node);
+            else if(data.update_node)
+                UpdateNode(data.update_node);
+
             window.setTimeout(GetUpdates, 0);
         },
         error: function(xhr, textStatus, errorThrown) {
