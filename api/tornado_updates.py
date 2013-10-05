@@ -7,8 +7,7 @@ from wh_mapper.lib.tornado import store_django_user
 from wh_mapper.tornado_vars import pulses
 
 class UpdatesAPI(tornado_web.RequestHandler):
-    def send_update(self, node_lock=None, new_page=None, new_node=None,
-                    delete_page=None, delete_node=None, update_node=None):
+    def send_update(self, **kwargs):
         if (self.page_name in pulses and
             self.user.username in pulses[self.page_name]):
             IOLoop.instance().remove_timeout(
@@ -21,12 +20,23 @@ class UpdatesAPI(tornado_web.RequestHandler):
         else:
             data = {'user_list' :
                 list(set([user for page in pulses for user in pulses[page]]))}
-            if node_lock: data.update(node_lock=node_lock)
-            if new_page: data.update(new_page=new_page)
-            elif new_node: data.update(new_node=new_node)
-            elif delete_page: data.update(delete_page=delete_page)
-            elif delete_node: data.update(delete_node=delete_node)
-            elif update_node: data.update(update_node=update_node)
+
+            if 'node_lock' in kwargs:
+                data['node_lock'] = kwargs['node_lock']
+
+            if 'new_page' in kwargs:
+                data['new_page'] = kwargs['new_page']
+            elif 'new_node' in kwargs:
+                data['new_node'] = kwargs['new_node']
+            elif 'delete_page' in kwargs:
+                data['delete_page'] = kwargs['delete_page']
+            elif 'delete_node' in kwargs:
+                data['delete_node'] = kwargs['delete_node']
+            elif 'update_node' in kwargs:
+                data['update_node'] = kwargs['update_node']
+            elif 'update_connection' in kwargs:
+                data['update_connection'] = kwargs['update_connection']
+
             self.finish(data)
 
     def send_update_timeout(self):

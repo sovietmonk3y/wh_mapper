@@ -82,7 +82,7 @@ $(document).ready(function() {
         document.onclick = function(e) {
             var tag_name = e.target.tagName.toLowerCase();
             if(tag_name != 'ellipse' && tag_name != 'text' &&
-               tag_name != 'tspan' && tag_name != 'a' &&
+               tag_name != 'tspan' && tag_name != 'path' && tag_name != 'a' &&
                !$(e.target).closest('form').length) {
                 ClearSelection();
             }
@@ -148,6 +148,28 @@ $(document).ready(function() {
             $container.html($stashConnectionForm.html());
             $container.attr('class', $stashConnectionForm.attr('class'));
             $container.find('#wormhole-sig').focus();
+        });
+
+        $('#systemsHolder').on('click', '#edit-connection', function(e) {
+            e.preventDefault();
+
+            var $stashConnectionForm = $('#stash .new-connection-form');
+            var $container = $(this).parent();
+            var connection = paper.getById($container.attr('data-path-id'))
+                                  .connection;
+            $container.html($stashConnectionForm.html());
+            $container.attr('class',
+                $stashConnectionForm.attr('class').replace('new', 'edit'));
+            $container.find('#wormhole-sig').val(
+                connection.wormhole_sig).focus();
+            $container.find('#origin-celestial').val(
+                connection.parent_celestial);
+            $container.find('#destination-celestial').val(
+                connection.child_celestial);
+            $container.find('#life-level[value="' + connection.life_level +
+                            '"]').attr('checked', true);
+            $container.find('#mass-level[value="' + connection.mass_level +
+                            '"]').attr('checked', true);
         });
 
         $('#systemsHolder').on('click', '#delete-system', function(e) {
@@ -284,6 +306,53 @@ $(document).ready(function() {
             });
         });
 
+        $('#systemsHolder').on('submit', '.edit-connection-form', function(e) {
+            e.preventDefault();
+
+            var $formDiv = $(this);
+
+            var wormholeSig = $formDiv.find('#wormhole-sig').val().trim();
+            if(wormholeSig == '' || wormholeSig.length != WORMHOLE_SIG_LENGTH) {
+                alert('A valid wormhole sig must be entered.');
+                return;
+            }
+
+            var $lifeLevel = $formDiv.find('#life-level:checked');
+            if(!$lifeLevel.length) {
+                alert('A life level must be selected.');
+                return;
+            }
+
+            var $massLevel = $formDiv.find('#mass-level:checked');
+            if(!$massLevel.length) {
+                alert('A mass level must be selected.');
+                return;
+            }
+
+            $.ajax({
+                type: 'PUT',
+                url: '/api/system_connection/' +
+                    paper.getById($formDiv.attr('data-path-id')).connection.id +
+                    '/',
+                data: {
+                    'wormhole': wormholeSig,
+                    'parent_celestial':
+                        $formDiv.find('#origin-celestial').val().trim(),
+                    'child_celestial':
+                        $formDiv.find('#destination-celestial').val().trim(),
+                    'life_level': $lifeLevel.val(),
+                    'mass_level': $massLevel.val()
+                },
+                success: function(data) {
+                    ClearSelection(true);
+                    UpdateConnection(JSON.parse(data));
+                },
+                error: function(xhr) {
+                    alert(xhr.responseText);
+                }
+            });
+        });
+
         paper = Raphael('systemsHolder', getCanvasWidth(), getCanvasHeight());
 
         var currentY = 0;
@@ -401,12 +470,12 @@ function DrawSystem(paper, indentX, indentY, system) {
 
     ColorSystem(system, systemText);
 
-    system.ellipse.mouseover(OnSysOver);
-    system.ellipse.mouseout(OnSysOut);
-    system.ellipse.mousedown(OnSysDown);
-    systemText.mouseover(OnSysOver);
-    systemText.mouseout(OnSysOut);
-    systemText.mousedown(OnSysDown);
+    system.ellipse.mouseover(OnSystemHover);
+    system.ellipse.mouseout(OnSystemHoverOut);
+    system.ellipse.mousedown(OnSystemClick);
+    systemText.mouseover(OnSystemHover);
+    systemText.mouseout(OnSystemHoverOut);
+    systemText.mousedown(OnSystemClick);
 }
 
 function GetSystemX(indentX, system) {
@@ -495,9 +564,10 @@ function ConnectSystems(paper, parentSystem, childSystem, lineColor) {
     path.attr('stroke', lineColor);
     childSystem.ellipse.pathToParent = path;
     childSystem.ellipse.pathToParent.connection = childSystem.parent_connection;
+    path.mousedown(OnConnectionClick);
 }
 
-function OnSysOver() {
+function OnSystemHover() {
     var ellipse;
     if(this.type == 'ellipse') ellipse = this;
     else ellipse = this.ellipse;
@@ -527,7 +597,7 @@ function OnSysOver() {
     }
 }
 
-function OnSysOut() {
+function OnSystemHoverOut() {
     var ellipse;
     if(this.type == 'ellipse') ellipse = this;
     else ellipse = this.ellipse;
@@ -561,6 +631,11 @@ function ClearSelection(softClear) {
             el.system.$actionPanel = null;
             return;
         }
+        else if(el.type == 'path' && el.connection &&
+                el.connection.$actionPanel) {
+            el.connection.$actionPanel.remove();
+            el.connection.$actionPanel = null;
+        }
     });
 }
 
@@ -585,7 +660,7 @@ function ActivateNode(system, ellipse) {
     }
 }
 
-function OnSysDown(e) {
+function OnSystemClick() {
     var ellipse;
     if(this.type == 'ellipse') ellipse = this;
     else ellipse = this.ellipse;
@@ -606,6 +681,18 @@ function OnSysDown(e) {
                 alert(errorThrown);
             }
         });
+    }
+}
+
+function OnConnectionClick() {
+    if(this.connection && !this.connection.$actionPanel) {
+        ClearSelection(true);
+        var pathBox = this.getBBox();
+        this.connection.$actionPanel =
+            $('#stash .connection-actions').clone().appendTo('#systemsHolder');
+        this.connection.$actionPanel.attr('data-path-id', this.id);
+        this.connection.$actionPanel.css(
+            {'top': pathBox.y, 'left': pathBox.x2});
     }
 }
 
@@ -844,6 +931,33 @@ function UpdateNode(node) {
     });
 }
 
+function UpdateConnection(connection) {
+    paper.forEach(function(el) {
+        if(el.type == 'ellipse' && el.pathToParent &&
+           el.pathToParent.connection &&
+           el.pathToParent.connection.id == connection.id) {
+            var curConnection = el.pathToParent.connection;
+            curConnection.author = connection.author;
+            curConnection.parent_celestial = connection.parent_celestial;
+            curConnection.child_celestial = connection.child_celestial;
+            curConnection.life_level = connection.life_level;
+            curConnection.mass_level = connection.mass_level;
+            if(curConnection.wormhole_sig != connection.wormhole_sig) {
+                curConnection.wormhole_sig = connection.wormhole_sig;
+                if(!el.system.name && curConnection.facing_down &&
+                   connection.wormhole_type &&
+                   el.system.type != connection.wormhole_type) {
+                    el.system.type = connection.wormhole_type;
+                    el.text.attr('text', SYSTEM_PLACEHOLDER_NAME + '\n(' +
+                                 el.system.type + ')');
+                    ColorSystem(el.system, el.text);
+                }
+            }
+            return;
+        }
+    });
+}
+
 function GetUpdates() {
     $.ajax({
         type: "GET",
@@ -868,6 +982,7 @@ function GetUpdates() {
                     }
                 });
             }
+
             if(data.new_page) {
                 $('select').append('<option value="' + data.new_page + '">' +
                                    data.new_page + '</option>');
@@ -887,6 +1002,8 @@ function GetUpdates() {
                 DeleteNode(data.delete_node);
             else if(data.update_node)
                 UpdateNode(data.update_node);
+            else if(data.update_connection)
+                UpdateConnection(data.update_connection);
 
             window.setTimeout(GetUpdates, 0);
         },

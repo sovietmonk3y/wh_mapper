@@ -1,7 +1,7 @@
 from django.core.exceptions import ValidationError
 import django.forms as forms
 
-from wh_mapper.constants import SYSTEM_NODE_PAGE_NAME_MAX_LENGTH
+import wh_mapper.constants as wh_mapper_constants
 import wh_mapper.models as wh_mapper_models
 
 class SystemNodeCreateForm(forms.ModelForm):
@@ -88,10 +88,38 @@ class SystemConnectionCreateForm(forms.ModelForm):
             return data
 
 
+class SystemConnectionEditForm(forms.ModelForm):
+    parent_celestial = forms.IntegerField(min_value=0, max_value=20,
+                                          required=False)
+    child_celestial = forms.IntegerField(min_value=0, max_value=20,
+                                         required=False)
+    wormhole = forms.ModelChoiceField(required=False,
+        queryset=wh_mapper_models.Wormhole.objects.all())
+    life_level = forms.IntegerField(required=False,
+        min_value=wh_mapper_constants.WORMHOLE_LIFE_LEVELS[0][0],
+        max_value=wh_mapper_constants.WORMHOLE_LIFE_LEVELS[-1][0])
+    mass_level = forms.IntegerField(required=False,
+        min_value=wh_mapper_constants.WORMHOLE_MASS_LEVELS[0][0],
+        max_value=wh_mapper_constants.WORMHOLE_MASS_LEVELS[-1][0])
+
+    class Meta:
+        model = wh_mapper_models.SystemConnection
+        exclude = ['id', 'date', 'facing_down']
+
+    def clean(self):
+        if 'wormhole' in self.errors:
+            self.errors['wormhole'] = ['That is not a valid wormhole']
+            return self.cleaned_data
+        else:
+            data = super(SystemConnectionEditForm, self).clean()
+            return data
+
+
 class NodeLockCreateForm(forms.Form):
     node_id = forms.ModelChoiceField(required=False,
         queryset=wh_mapper_models.SystemNode.objects.all())
-    page_name = forms.CharField(max_length=SYSTEM_NODE_PAGE_NAME_MAX_LENGTH)
+    page_name = forms.CharField(
+        max_length=wh_mapper_constants.SYSTEM_NODE_PAGE_NAME_MAX_LENGTH)
 
     def clean(self):
         nodes = self.fields['node_id'].queryset

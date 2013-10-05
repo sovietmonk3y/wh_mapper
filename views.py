@@ -4,6 +4,8 @@ import django.contrib.auth as contrib_auth
 from django.http import HttpResponseRedirect, HttpResponseBadRequest
 from django.shortcuts import render_to_response
 
+from tornado.ioloop import IOLoop
+
 import wh_mapper.constants as constants
 import wh_mapper.models as wh_mapper_models
 from wh_mapper.tornado_vars import node_locks, pulses
@@ -30,7 +32,15 @@ def system_map(request, page=None):
         if page:
             for page_name in node_locks:
                 if request.user.username in node_locks[page_name]:
+                    node_id = node_locks[page_name][request.user.username]
                     del node_locks[page_name][request.user.username]
+                    for user in pulses[page_name]:
+                        if user != request.user.username:
+                            send_update = (
+                                pulses[page_name][user].callback)
+                            IOLoop.instance().add_callback(send_update,
+                                node_lock={'username' : None,
+                                           'node_id' : node_id})
                     break
 
         nodes = wh_mapper_models.SystemNode.objects.select_related(
