@@ -7,7 +7,7 @@ from tornado.ioloop import IOLoop
 
 import wh_mapper.forms as wh_mapper_forms
 import wh_mapper.models as wh_mapper_models
-from wh_mapper.tornado_vars import node_locks, pulses
+from wh_mapper.tornado_vars import object_locks, pulses
 
 class SystemConnectionCreateAPI(View):
 
@@ -27,21 +27,19 @@ class SystemConnectionCreateAPI(View):
                 node_form.instance.parent_connection_id = system_connection.id
                 child_node = node_form.save()
 
-                del node_locks[child_node.page_name][request.user.username]
+                del object_locks[child_node.page_name][request.user.username]
 
                 node_json = child_node.json_safe()
                 node_json['children'] = []
 
-                update_data = {'node_lock' :
-                                   {'username' : None,
-                                    'node_id' : child_node.parent_node_id},
-                               'new_node' : node_json}
                 for user in pulses[child_node.page_name]:
                     if user != request.user.username:
                         send_update = (
                             pulses[child_node.page_name][user].callback)
                         IOLoop.instance().add_callback(send_update,
-                            **update_data)
+                            object_lock={'id' : child_node.parent_node_id,
+                                         'type' : 'node'},
+                            new_node=node_json)
 
                 return django_http.HttpResponse(json.dumps(node_json))
             else:
@@ -76,11 +74,14 @@ class SystemConnectionEditAPI(View):
                 for page in pulses:
                     if request.user.username in pulses[page]:
                         break
+                del object_locks[page][request.user.username]
                 for user in pulses[page]:
                     if user != request.user.username:
                         send_update = (
                             pulses[page][user].callback)
                         IOLoop.instance().add_callback(send_update,
+                            object_lock={'type' : 'connection',
+                                         'id' : connection.id},
                             update_connection=connection_json)
 
                 return django_http.HttpResponse(json.dumps(connection_json))

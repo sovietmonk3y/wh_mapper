@@ -21,8 +21,8 @@ class UpdatesAPI(tornado_web.RequestHandler):
             data = {'user_list' :
                 list(set([user for page in pulses for user in pulses[page]]))}
 
-            if 'node_lock' in kwargs:
-                data['node_lock'] = kwargs['node_lock']
+            if 'object_lock' in kwargs:
+                data['object_lock'] = kwargs['object_lock']
 
             if 'new_page' in kwargs:
                 data['new_page'] = kwargs['new_page']

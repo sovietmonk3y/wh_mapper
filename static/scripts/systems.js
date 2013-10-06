@@ -415,12 +415,18 @@ $(document).ready(function() {
             }
         }
 
-        if(nodeLocks) {
-            nodeLocks.forEach(function(nodeLock) {
+        if(objectLocks) {
+            objectLocks.forEach(function(objectLock) {
                 paper.forEach(function(el) {
-                    if(el.type == 'ellipse' &&
-                       el.system.id == nodeLock.node_id) {
-                        LockNode(el, nodeLock.username);
+                    if(objectLock.type == 'node' && el.type == 'ellipse' &&
+                       el.system.id == objectLock.id) {
+                        LockNode(el, objectLock.username);
+                        return;
+                    }
+                    else if(objectLock.type == 'connection' &&
+                            el.type == 'path' && el.connection &&
+                            el.connection.id == objectLock.id) {
+                        LockConnection(el, objectLock.username);
                         return;
                     }
                 });
@@ -562,9 +568,10 @@ function ConnectSystems(paper, parentSystem, childSystem, lineColor) {
                           childBox.x + "," + endY);
     }
     path.attr('stroke', lineColor);
-    childSystem.ellipse.pathToParent = path;
-    childSystem.ellipse.pathToParent.connection = childSystem.parent_connection;
+    path.childNode = childSystem.ellipse;
+    path.connection = childSystem.parent_connection;
     path.mousedown(OnConnectionClick);
+    childSystem.ellipse.pathToParent = path;
 }
 
 function OnSystemHover() {
@@ -586,7 +593,7 @@ function OnSystemHover() {
             system.$infoPanel.children('#system-info-wspace-effect')
                              .append(system.wspace_effect)
                              .removeAttr('hidden');
-        if(system.notes_html)
+        if(system.notes_text)
             system.$infoPanel.children('#system-info-notes')
                              .append(system.notes_html)
                              .removeAttr('hidden');
@@ -615,26 +622,28 @@ function OnSystemHoverOut() {
 
 function ClearSelection(softClear) {
     paper.forEach(function(el) {
-        if(el.type == 'ellipse' && el.system.$actionPanel) {
+        if((el.type == 'ellipse' && el.system.$actionPanel) ||
+           (el.type == 'path' && el.connection && el.connection.$actionPanel)) {
             if(!softClear) {
                 $.ajax({
                     type: 'POST',
-                    url: '/lock_node/',
+                    url: '/lock_object/',
                     data: {
                         'node_id' : null,
                         'page_name': window.location.pathname.split('/')[1]
                     }
                 });
             }
-            el.attr('stroke-width', 2);
-            el.system.$actionPanel.remove();
-            el.system.$actionPanel = null;
+            if(el.type == 'ellipse') {
+                el.attr('stroke-width', 2);
+                el.system.$actionPanel.remove();
+                el.system.$actionPanel = null;
+            }
+            else {
+                el.connection.$actionPanel.remove();
+                el.connection.$actionPanel = null;
+            }
             return;
-        }
-        else if(el.type == 'path' && el.connection &&
-                el.connection.$actionPanel) {
-            el.connection.$actionPanel.remove();
-            el.connection.$actionPanel = null;
         }
     });
 }
@@ -667,9 +676,36 @@ function OnSystemClick() {
     var system = ellipse.system;
 
     if(!system.locked && !system.$actionPanel) {
+        if(system.children.length) {
+            var checkedDescendants = [];
+            var currentNode = system;
+            while(currentNode) {
+                if(system.children.length &&
+                   checkedDescendants.indexOf(system.children[0].id) == -1)
+                    currentNode = system.children[0];
+                else
+                    currentNode = TraverseToNextNode(currentNode);
+
+                if(currentNode.id == system.id) break;
+
+                if(currentNode.locked || (currentNode.pathToParent &&
+                    currentNode.pathToParent.connection &&
+                    currentNode.pathToParent.connection.locked)) {
+                    alert('Cannot lock a node whose descendant is locked.');
+                    return;
+                }
+
+                checkedDescendants.push(currentNode.id);
+                if(currentNode.pathToParent &&
+                   currentNode.pathToParent.connection)
+                    checkedDescendants.push(
+                        currentNode.pathToParent.connection.id);
+            }
+        }
+
         $.ajax({
             type: 'POST',
-            url: '/lock_node/',
+            url: '/lock_object/',
             data: {
                 'node_id' : system.id,
                 'page_name': window.location.pathname.split('/')[1]
@@ -685,14 +721,30 @@ function OnSystemClick() {
 }
 
 function OnConnectionClick() {
-    if(this.connection && !this.connection.$actionPanel) {
-        ClearSelection(true);
-        var pathBox = this.getBBox();
-        this.connection.$actionPanel =
-            $('#stash .connection-actions').clone().appendTo('#systemsHolder');
-        this.connection.$actionPanel.attr('data-path-id', this.id);
-        this.connection.$actionPanel.css(
-            {'top': pathBox.y, 'left': pathBox.x2});
+    if(this.connection && !this.connection.locked &&
+       !this.connection.$actionPanel) {
+        var path = this;
+        $.ajax({
+            type: 'POST',
+            url: '/lock_object/',
+            data: {
+                'connection_id' : path.connection.id,
+                'page_name': window.location.pathname.split('/')[1]
+            },
+            success: function() {
+                ClearSelection(true);
+                var pathBox = path.getBBox();
+                path.connection.$actionPanel =
+                    $('#stash .connection-actions').clone()
+                    .appendTo('#systemsHolder');
+                path.connection.$actionPanel.attr('data-path-id', path.id);
+                path.connection.$actionPanel.css(
+                    {'top': pathBox.y, 'left': pathBox.x2});
+            },
+            error: function(xhr, textStatus, errorThrown) {
+                alert(errorThrown);
+            }
+        });
     }
 }
 
@@ -705,31 +757,41 @@ function TraverseToNextNode(currentNode) {
         return currentNode.parent;
 }
 
-function LockNode(ellipse, username) {
+function LockNode(ellipse, username, noTraversal) {
     var currentNode = ellipse.system;
     currentNode.ellipse.attr({'stroke-width': 4, 'fill': 'gray'});
     currentNode.locked = username;
-    if(currentNode.children.length) {
-        while(currentNode) {
-            if(currentNode.children.length && !currentNode.children[0].locked)
-                currentNode = currentNode.children[0];
-            else
-                currentNode = TraverseToNextNode(currentNode);
-            if(currentNode.id == ellipse.system.id) break;
-            if(!currentNode.locked) {
-                currentNode.ellipse.attr({'stroke-width': 4, 'fill': 'gray'});
-                currentNode.locked = username;
+    if(!noTraversal) {
+        if(ellipse.pathToParent && ellipse.pathToParent.connection)
+            ellipse.pathToParent.connection.locked = username;
+        if(currentNode.children.length) {
+            while(currentNode) {
+                if(currentNode.children.length &&
+                   !currentNode.children[0].locked)
+                    currentNode = currentNode.children[0];
+                else
+                    currentNode = TraverseToNextNode(currentNode);
+                if(currentNode.id == ellipse.system.id) break;
+                if(!currentNode.locked) {
+                    currentNode.ellipse.attr({'stroke-width': 4,
+                                              'fill': 'gray'});
+                    currentNode.locked = username;
+                    if(currentNode.ellipse.pathToParent &&
+                       currentNode.ellipse.pathToParent.connection)
+                        LockConnection(currentNode.ellipse.pathToParent,
+                                       username, true);
+                }
             }
         }
     }
 }
 
-function UnlockNode(ellipse) {
+function UnlockNode(ellipse, noTraversal) {
     var currentNode = ellipse.system;
     var locker = currentNode.locked;
     ColorSystem(currentNode, currentNode.ellipse.text);
     currentNode.locked = null;
-    if(currentNode.children.length) {
+    if(!noTraversal && currentNode.children.length) {
         while(currentNode) {
             if(currentNode.children.length && currentNode.children[0].locked)
                 currentNode = currentNode.children[0];
@@ -739,9 +801,22 @@ function UnlockNode(ellipse) {
             if(currentNode.locked && currentNode.locked == locker) {
                 ColorSystem(currentNode, currentNode.ellipse.text);
                 currentNode.locked = null;
+                if(currentNode.ellipse.pathToParent &&
+                   currentNode.ellipse.pathToParent.connection)
+                    UnlockConnection(currentNode.ellipse.pathToParent);
             }
         }
     }
+}
+
+function LockConnection(path, username, noTraversal) {
+    path.connection.locked = username;
+    if(!noTraversal) LockNode(path.childNode, username, true);
+}
+
+function UnlockConnection(path) {
+    path.connection.locked = null;
+    UnlockNode(path.childNode, true);
 }
 
 function AddNode(node) {
@@ -964,21 +1039,38 @@ function GetUpdates() {
         url: "/get_updates/" + window.location.pathname.split('/')[1] + "/",
         success: function(data) {
             $('#user-list').html(data.user_list.join(', '));
-            if(data.node_lock) {
-                if(data.node_lock.username) {
+
+            if(data.object_lock) {
+                if(data.object_lock.username) {
                     paper.forEach(function(el) {
                         if(el.type == 'ellipse' && el.system.locked &&
-                           el.system.locked == data.node_lock.username)
+                           el.system.locked == data.object_lock.username)
                             UnlockNode(el);
+                        else if(el.type == 'path' && el.connection &&
+                                el.connection.locked &&
+                                el.connection.locked ==
+                                data.object_lock.username)
+                            UnlockConnection(el);
                     });
                 }
                 paper.forEach(function(el) {
-                    if(el.type == 'ellipse' &&
-                       el.system.id == data.node_lock.node_id) {
-                        if(data.node_lock.username)
-                            LockNode(el, data.node_lock.username);
+                    if(data.object_lock.type == 'node' &&
+                       el.type == 'ellipse' &&
+                       el.system.id == data.object_lock.id) {
+                        if(data.object_lock.username)
+                            LockNode(el, data.object_lock.username);
                         else
                             UnlockNode(el);
+                        return;
+                    }
+                    else if(data.object_lock.type == 'connection' &&
+                            el.type == 'path' && el.connection &&
+                            el.connection.id == data.object_lock.id) {
+                        if(data.object_lock.username)
+                            LockConnection(el, data.object_lock.username);
+                        else
+                            UnlockConnection(el);
+                        return;
                     }
                 });
             }

@@ -7,7 +7,7 @@ from tornado.ioloop import IOLoop
 
 import wh_mapper.forms as wh_mapper_forms
 import wh_mapper.models as wh_mapper_models
-from wh_mapper.tornado_vars import node_locks, pulses
+from wh_mapper.tornado_vars import object_locks, pulses
 
 class SystemNodeCreateAPI(View):
 
@@ -22,20 +22,18 @@ class SystemNodeCreateAPI(View):
                 node_json['children'] = []
 
                 if new_node.page_name in pulses:
-                    del node_locks[new_node.page_name][request.user.username]
-                    update_data = {'node_lock' :
-                                       {'username' : None,
-                                        'node_id' : new_node.parent_node_id},
-                                   'new_node' : node_json}
+                    del object_locks[new_node.page_name][request.user.username]
                     for user in pulses[new_node.page_name]:
                         if user != request.user.username:
                             send_update = (
                                 pulses[new_node.page_name][user].callback)
                             IOLoop.instance().add_callback(send_update,
-                                **update_data)
+                                object_lock={'id' : new_node.parent_node_id,
+                                             'type' : 'node'},
+                                new_node=node_json)
                 else:
                     pulses[new_node.page_name] = {}
-                    node_locks[new_node.page_name] = {}
+                    object_locks[new_node.page_name] = {}
                     for update_timeout in [
                         pulses[page][user] for page in pulses
                         for user in pulses[page]
@@ -72,16 +70,14 @@ class SystemNodeEditAPI(View):
                 node = edit_form.save()
                 node_json = node.json_safe()
 
-                del node_locks[page_name][request.user.username]
-                update_data = {'node_lock' :
-                                   {'username' : None, 'node_id' : node_id},
-                               'update_node' : node_json}
+                del object_locks[page_name][request.user.username]
                 for user in pulses[page_name]:
                     if user != request.user.username:
                         send_update = (
                             pulses[page_name][user].callback)
                         IOLoop.instance().add_callback(send_update,
-                            **update_data)
+                            object_lock={'type' : 'node', 'id' : node_id},
+                            update_node=node_json)
 
                 return django_http.HttpResponse(json.dumps(node_json))
             else:
@@ -118,23 +114,27 @@ class SystemNodeEditAPI(View):
                 if current_level_id_list:
                     node_delete_id_list.extend(current_level_id_list)
 
-            if len(set(node_delete_id_list).intersection(
-                    node_locks[page_name].values())) > 1:
+            connection_delete_id_list = [id_dict['parent_connection_id']
+                                         for id_dict in node_id_dict_list if
+                                         id_dict['id'] in node_delete_id_list]
+
+            object_lock_id_list = [lock['id'] for lock in
+                                   object_locks[page_name].values()]
+            if (len(set(node_delete_id_list).intersection(
+                object_lock_id_list)) > 1 or
+                set(connection_delete_id_list).intersection(
+                    object_lock_id_list)):
                 return django_http.HttpResponseBadRequest(
                     'Cannot delete a node whose descendant is currently locked')
-
-            connection_id_list = [id_dict['parent_connection_id'] for id_dict in
-                                  node_id_dict_list if id_dict['id'] in
-                                  node_delete_id_list]
 
             wh_mapper_models.SystemNode.objects.filter(
                 id__in=node_delete_id_list).delete()
 
             wh_mapper_models.SystemConnection.objects.filter(
-                id__in=connection_id_list).delete()
+                id__in=connection_delete_id_list).delete()
 
             if node_id_dict_list[0]['id'] == node_id:
-                del node_locks[page_name]
+                del object_locks[page_name]
                 for update_timeout in [pulses[page][user] for page in pulses
                                        for user in pulses[page]
                                        if user != request.user.username]:
@@ -143,7 +143,7 @@ class SystemNodeEditAPI(View):
                         delete_page=page_name)
                 del pulses[page_name]
             elif page_name in pulses:
-                del node_locks[page_name][request.user.username]
+                del object_locks[page_name][request.user.username]
                 for user in pulses[page_name]:
                     if user != request.user.username:
                         send_update = pulses[page_name][user].callback

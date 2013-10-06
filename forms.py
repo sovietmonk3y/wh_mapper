@@ -113,30 +113,3 @@ class SystemConnectionEditForm(forms.ModelForm):
         else:
             data = super(SystemConnectionEditForm, self).clean()
             return data
-
-
-class NodeLockCreateForm(forms.Form):
-    node_id = forms.ModelChoiceField(required=False,
-        queryset=wh_mapper_models.SystemNode.objects.all())
-    page_name = forms.CharField(
-        max_length=wh_mapper_constants.SYSTEM_NODE_PAGE_NAME_MAX_LENGTH)
-
-    def clean(self):
-        nodes = self.fields['node_id'].queryset
-        node_and_page_valid = False
-        for node in nodes:
-            if (self.data['node_id'] and node.id == self.data['node_id'] and
-                node.page_name == self.data['page_name']):
-                node_and_page_valid = True
-                break
-            elif (not self.data['node_id'] and
-                  node.page_name == self.data['page_name']):
-                node_and_page_valid = True
-        if not node_and_page_valid:
-            raise ValidationError('A node with such an id on such a page does' +
-                                  ' not exist')
-
-        self.fields['node_id'].queryset._result_cache = None
-
-        data = super(NodeLockCreateForm, self).clean()
-        return data

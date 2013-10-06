@@ -8,7 +8,7 @@ from tornado.ioloop import IOLoop
 
 import wh_mapper.constants as constants
 import wh_mapper.models as wh_mapper_models
-from wh_mapper.tornado_vars import node_locks, pulses
+from wh_mapper.tornado_vars import object_locks, pulses
 
 def login(request):
     if request.user.is_authenticated():
@@ -29,19 +29,19 @@ def login(request):
 
 def system_map(request, page=None):
     if request.user.is_authenticated():
-        if page:
-            for page_name in node_locks:
-                if request.user.username in node_locks[page_name]:
-                    node_id = node_locks[page_name][request.user.username]
-                    del node_locks[page_name][request.user.username]
-                    for user in pulses[page_name]:
-                        if user != request.user.username:
-                            send_update = (
-                                pulses[page_name][user].callback)
-                            IOLoop.instance().add_callback(send_update,
-                                node_lock={'username' : None,
-                                           'node_id' : node_id})
-                    break
+        for page_name in object_locks:
+            if request.user.username in object_locks[page_name]:
+                object_id = object_locks[page_name][request.user.username]['id']
+                object_type = object_locks[page_name][request.user.username][
+                    'type']
+                del object_locks[page_name][request.user.username]
+                for user in pulses[page_name]:
+                    if user != request.user.username:
+                        send_update = pulses[page_name][user].callback
+                        IOLoop.instance().add_callback(send_update,
+                            object_lock={'type' : object_type,
+                                         'id' : object_id})
+                break
 
         nodes = wh_mapper_models.SystemNode.objects.select_related(
             'system', 'parent_connection__wormhole').order_by('parent_node')
@@ -104,18 +104,19 @@ def system_map(request, page=None):
             node_tree['children'] = sorted(node_tree['children'].values(),
                                            key=lambda x:x['date'])
 
-        template_vars = {'system_tree': json.dumps(node_tree),
-                         'system_tree_length': node_tree_length,
-                         'system_tree_width': node_tree_width,
-                         'page': page,
-                         'map_pages': map_pages,
-                         'user_list': list(set([user for pulse_page in pulses
+        template_vars = {'system_tree' : json.dumps(node_tree),
+                         'system_tree_length' : node_tree_length,
+                         'system_tree_width' : node_tree_width,
+                         'page' : page,
+                         'map_pages' : map_pages,
+                         'user_list' : list(set([user for pulse_page in pulses
                                                 for user in pulses[pulse_page]])
-                                           .union([request.user.username])),
-                         'node_locks': json.dumps([
-                             {'node_id' : node_locks[page][username],
+                                            .union([request.user.username])),
+                         'object_locks' : json.dumps([
+                             {'id' : object_locks[page][username]['id'],
+                              'type' : object_locks[page][username]['type'],
                               'username' : username}
-                             for username in node_locks.get(page, {})]),
+                             for username in object_locks.get(page, {})]),
                          'WORMHOLE_SIG_LENGTH' :
                              constants.WORMHOLE_SIG_MAX_LENGTH,
                          'WORMHOLE_LIFE_LEVELS' :

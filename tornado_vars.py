@@ -1,2 +1,2 @@
-node_locks = {}
+object_locks = {}
 pulses = {}
