@@ -29,6 +29,14 @@ class Wormhole(models.Model):
     jump_mass = models.PositiveIntegerField()
     static = models.BooleanField()
 
+    def json_safe(self):
+        return {'sig' : self.sig,
+                'life' : self.life,
+                'total_mass' : self.total_mass,
+                'mass_regen' : self.mass_regen,
+                'jump_mass' : self.jump_mass,
+                'static' : self.static}
+
 
 class MapObject(models.Model):
     id = models.CharField(max_length=wmc.MAP_OBJECT_ID_MAX_LENGTH,
@@ -79,10 +87,10 @@ class SystemConnection(MapObject):
         json_dict = super(SystemConnection, self).json_safe()
         json_dict.update(parent_celestial=self.parent_celestial,
                          child_celestial=self.child_celestial,
-                         wormhole_sig=self.wormhole_sig,
                          life_level=self.life_level,
                          mass_level=self.mass_level,
-                         facing_down=self.facing_down)
+                         facing_down=self.facing_down,
+                         wormhole=self.wormhole.json_safe())
         return json_dict
 
 

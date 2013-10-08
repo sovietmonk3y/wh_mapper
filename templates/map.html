@@ -30,13 +30,6 @@
     </head>
 
     <body>
-        Current users:
-        <span id="user-list">
-            {% for user in user_list %}
-                {{ user }}{% if not forloop.last %}, {% endif %}
-            {% endfor %}
-        </span><br/><br/>
-        Map page:
         <select>
             <option value=""></option>
             {% for map_page in map_pages %}
@@ -47,8 +40,15 @@
             {% endfor %}
         </select>
         <a id="create-page" href="">+ New Map</a>
-        <br /><br />
-        <div id="systemsHolder"></div> 
+        <br/><br/>
+        Active Users<br/>
+        <span id="user-list">
+            {% for user in user_list %}
+                {{ user }}{% if not forloop.last %}, {% endif %}
+            {% endfor %}
+        </span>
+        <br/><br/>
+        <div id="map"></div>
 
         <div id="stash">
             <div class="new-page-form">

@@ -1,8 +1,21 @@
+body {
+    background-color: #222222;
+    color: white;
+}
+
+a {
+    color: white;
+}
+
+#create-page {
+    background-color: rgb(41, 128, 185);
+}
+
 #stash {
     display: none;
 }
 
-#systemsHolder {
+#map {
     position: relative;
 }
 
@@ -16,9 +29,56 @@
     position: absolute;
     padding: 5px 10px;
     font-size: 13px;
-    background-image: url('/static/images/whInfoBgr.png');
+    background-color: #7f8c8d;
 }
 
 table {
     font-size: 13px;
+}
+
+text {
+    fill: white;
+    cursor: default;
+}
+
+rect.high {
+    fill: #27ae60;
+    stroke: #27ae60;
+}
+
+rect.low {
+    fill: #e67e22;
+    stroke: #e67e22;
+}
+
+rect.null {
+    fill: #e74c3c;
+    stroke: #e74c3c;
+}
+
+rect.c1, rect.c2, rect.c3, rect.c4, rect.c5, rect.c6 {
+    fill: #9b59b6;
+    stroke: #9b59b6;
+}
+
+path.wormhole-connection {
+    stroke-dasharray: 4;
+}
+
+rect.system-connection, path {
+    fill: #7f8c8d;
+    stroke: #7f8c8d;
+}
+
+rect.hover {
+    stroke-width: 4;
+}
+
+rect {
+    fill: #4e4e4e;
+    stroke: #4e4e4e;
+}
+
+rect.locked {
+    opacity: 0.2;
 }

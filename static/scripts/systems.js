@@ -1,14 +1,23 @@
 var paper;
-var indentX = 180;
-var indentY = 64;
-var CANVAS_HEIGHT_PADDING = 80;
-var CANVAS_WIDTH_PADDING = 110;
-var ROOT_ELLIPSE_RX = 40;
-var ROOT_ELLIPSE_RY = 30;
-var NON_ROOT_ELLIPSE_RX = 45;
-var NON_ROOT_ELLIPSE_RY = 28;
-var SYSTEM_CONNECTION_LINE_COLOR = "#825E48";
-var SYSTEM_PLACEHOLDER_NAME = 'XXX';
+var VERTICAL_LEVEL_OFFSET = 10;
+var RECT_WIDTH = 140;
+var RECT_HEIGHT = 50;
+var PARENT_CONNECTION_SQUARE_OFFSET = 10;
+var CHILD_CONNECTION_SQUARE_OFFSET = 20;
+var CONNECTION_SQUARE_SIZE = 50;
+var CONNECTION_TRIANGLE_WIDTH = 10;
+var CONNECTION_TRIANGLE_HEIGHT = 5;
+var CONNECTION_SQUARE_PATH_OFFSET = 10;
+var CONNECTION_SQUARE_TEXT_OFFSET = 30;
+var CONNECTION_PATH_TEXT_VERTICAL_OFFSET = 10;
+var CONNECTION_PATH_LENGTH = 100;
+var SYSTEM_PLACEHOLDER_NAME = '?';
+
+var KG_TO_MILKG = 1000000;
+
+var PARENT_CHILD_HORIZONTAL_OFFSET = PARENT_CONNECTION_SQUARE_OFFSET +
+    (CONNECTION_SQUARE_SIZE * 2) + (CONNECTION_SQUARE_PATH_OFFSET * 2) +
+    CONNECTION_PATH_LENGTH + CHILD_CONNECTION_SQUARE_OFFSET;
 
 $(document).ready(function() {
     $('select').on('change', function() {
@@ -81,7 +90,7 @@ $(document).ready(function() {
 
         document.onclick = function(e) {
             var tag_name = e.target.tagName.toLowerCase();
-            if(tag_name != 'ellipse' && tag_name != 'text' &&
+            if(tag_name != 'rect' && tag_name != 'text' &&
                tag_name != 'tspan' && tag_name != 'path' && tag_name != 'a' &&
                !$(e.target).closest('form').length) {
                 ClearSelection();
@@ -125,22 +134,22 @@ $(document).ready(function() {
             });
         }
 
-        $('#systemsHolder').on('click', '#add-system', function(e) {
+        $('#map').on('click', '#add-system', function(e) {
             e.preventDefault();
             ReplaceActionPanelSystemAction(this, 'new-system-form');
         });
 
-        $('#systemsHolder').on('click', '#edit-system', function(e) {
+        $('#map').on('click', '#edit-system', function(e) {
             e.preventDefault();
             var $container = $(this).parent();
             ReplaceActionPanelSystemAction(this, 'edit-system-form');
-            var system = paper.getById($container.attr('data-ellipse-id'))
+            var system = paper.getById($container.attr('data-rect-id'))
                               .system;
             $container.find('#system-name').val(system.name);
             $container.find('#system-notes').val(system.notes_text);
         });
 
-        $('#systemsHolder').on('click', '#add-connection', function(e) {
+        $('#map').on('click', '#add-connection', function(e) {
             e.preventDefault();
 
             var $stashConnectionForm = $('#stash .new-connection-form');
@@ -150,7 +159,7 @@ $(document).ready(function() {
             $container.find('#wormhole-sig').focus();
         });
 
-        $('#systemsHolder').on('click', '#edit-connection', function(e) {
+        $('#map').on('click', '#edit-connection', function(e) {
             e.preventDefault();
 
             var $stashConnectionForm = $('#stash .new-connection-form');
@@ -161,7 +170,7 @@ $(document).ready(function() {
             $container.attr('class',
                 $stashConnectionForm.attr('class').replace('new', 'edit'));
             $container.find('#wormhole-sig').val(
-                connection.wormhole_sig).focus();
+                connection.wormhole.sig).focus();
             $container.find('#origin-celestial').val(
                 connection.parent_celestial);
             $container.find('#destination-celestial').val(
@@ -172,10 +181,10 @@ $(document).ready(function() {
                             '"]').attr('checked', true);
         });
 
-        $('#systemsHolder').on('click', '#delete-system', function(e) {
+        $('#map').on('click', '#delete-system', function(e) {
             e.preventDefault();
 
-            var nodeID = paper.getById($(this).parent().attr('data-ellipse-id'))
+            var nodeID = paper.getById($(this).parent().attr('data-rect-id'))
                               .system.id;
             $.ajax({
                 type: 'DELETE',
@@ -195,7 +204,7 @@ $(document).ready(function() {
             });
         });
 
-        $('#systemsHolder').on('submit', '.new-system-form', function(e) {
+        $('#map').on('submit', '.new-system-form', function(e) {
             e.preventDefault();
 
             var $formDiv = $(this);
@@ -214,7 +223,7 @@ $(document).ready(function() {
                     'system': systemName,
                     'page_name': window.location.pathname.split('/')[1],
                     'parent_node': paper.getById(
-                        $formDiv.attr('data-ellipse-id')).system.id
+                        $formDiv.attr('data-rect-id')).system.id
                 },
                 success: function(data) {
                     ClearSelection(true);
@@ -226,7 +235,7 @@ $(document).ready(function() {
             });
         });
 
-        $('#systemsHolder').on('submit', '.edit-system-form', function(e) {
+        $('#map').on('submit', '.edit-system-form', function(e) {
             e.preventDefault();
 
             var $formDiv = $(this);
@@ -242,7 +251,7 @@ $(document).ready(function() {
                 type: 'PUT',
                 url: '/api/system_node/' +
                      window.location.pathname.split('/')[1] + '/' +
-                     paper.getById($formDiv.attr('data-ellipse-id')).system.id +
+                     paper.getById($formDiv.attr('data-rect-id')).system.id +
                      '/',
                 data: {
                     'system': systemName,
@@ -258,7 +267,7 @@ $(document).ready(function() {
             });
         });
 
-        $('#systemsHolder').on('submit', '.new-connection-form', function(e) {
+        $('#map').on('submit', '.new-connection-form', function(e) {
             e.preventDefault();
 
             var $formDiv = $(this);
@@ -293,7 +302,7 @@ $(document).ready(function() {
                     'life_level': $lifeLevel.val(),
                     'mass_level': $massLevel.val(),
                     'parent_node': paper.getById(
-                        $formDiv.attr('data-ellipse-id')).system.id,
+                        $formDiv.attr('data-rect-id')).system.id,
                     'page_name': window.location.pathname.split('/')[1]
                 },
                 success: function(data) {
@@ -306,7 +315,7 @@ $(document).ready(function() {
             });
         });
 
-        $('#systemsHolder').on('submit', '.edit-connection-form', function(e) {
+        $('#map').on('submit', '.edit-connection-form', function(e) {
             e.preventDefault();
 
             var $formDiv = $(this);
@@ -353,7 +362,7 @@ $(document).ready(function() {
             });
         });
 
-        paper = Raphael('systemsHolder', getCanvasWidth(), getCanvasHeight());
+        paper = Raphael('map', getCanvasWidth(), getCanvasHeight());
 
         var currentY = 0;
         var parentNode = systemTree;
@@ -361,10 +370,10 @@ $(document).ready(function() {
         parentNode.parent = null;
         parentNode.x = 0;
         parentNode.y = 0;
-        DrawSystem(paper, indentX, indentY, parentNode);
+        DrawSystem(paper, parentNode);
         while(parentNode != null) {
             if(childNode && !childNode.drawn) {
-                DrawSystem(paper, indentX, indentY, childNode);
+                DrawSystem(paper, childNode);
                 childNode.drawn = true;
             }
 
@@ -418,8 +427,8 @@ $(document).ready(function() {
         if(objectLocks) {
             objectLocks.forEach(function(objectLock) {
                 paper.forEach(function(el) {
-                    if(objectLock.type == 'node' && el.type == 'ellipse' &&
-                       el.system.id == objectLock.id) {
+                    if(objectLock.type == 'node' && el.type == 'rect' &&
+                       el.system && el.system.id == objectLock.id) {
                         LockNode(el, objectLock.username);
                         return;
                     }
@@ -438,155 +447,281 @@ $(document).ready(function() {
 });
 
 function getCanvasWidth() {
-    return CANVAS_WIDTH_PADDING + ((systemTreeLength - 1) * indentX);
+    return (RECT_WIDTH * systemTreeLength) +
+        ((systemTreeLength - 1) * PARENT_CHILD_HORIZONTAL_OFFSET);
 }
 
 function getCanvasHeight() {
-    return CANVAS_HEIGHT_PADDING + ((systemTreeWidth - 1) * indentY);
+    return (RECT_HEIGHT * systemTreeWidth) +
+        ((systemTreeWidth - 1) * VERTICAL_LEVEL_OFFSET);
 }
 
-function DrawSystem(paper, indentX, indentY, system) {
+function GetSystemText(system) {
+    var text = system.name;
+    if(!text) text = SYSTEM_PLACEHOLDER_NAME;
+
+    text += "\n";
+    if(system.region)
+        text += system.region;
+    else if(system.type && system.type.length == 2)
+        text += system.type;
+    else
+        text += SYSTEM_PLACEHOLDER_NAME;
+
+    return text;
+}
+
+function DrawSystem(paper, system) {
     if(system == null) return;
 
-    var systemX = GetSystemX(indentX, system);
-    var systemY = GetSystemY(indentY, system);
+    var systemX = GetSystemX(system);
+    var systemY = GetSystemY(system);
 
-    var systemName = system.name;
-    if(!systemName) systemName = SYSTEM_PLACEHOLDER_NAME;
+    system.rect = paper.rect(systemX, systemY, RECT_WIDTH, RECT_HEIGHT);
 
-    if(system.type && system.type.length > 0)
-        systemName += "\n(" + system.type + ")";
+    if(system.x > 0) ConnectSystems(paper, system.parent, system);
 
-    var systemText;
-    if(system.x > 0) {
-        system.ellipse = paper.ellipse(systemX, systemY, NON_ROOT_ELLIPSE_RX,
-                                       NON_ROOT_ELLIPSE_RY);
-        systemText = paper.text(systemX, systemY, systemName);
-        ConnectSystems(paper, system.parent, system,
-                       SYSTEM_CONNECTION_LINE_COLOR);
-    }
-    else {
-        system.ellipse = paper.ellipse(systemX, systemY, ROOT_ELLIPSE_RX,
-                                       ROOT_ELLIPSE_RY);
-        systemText = paper.text(systemX, systemY, systemName);
-    }
-    system.ellipse.text = systemText;
-    systemText.ellipse = system.ellipse;
-    system.ellipse.system = system;
+    var systemText = paper.text(systemX + (RECT_WIDTH / 2),
+        systemY + (RECT_HEIGHT / 2), GetSystemText(system));
 
-    ColorSystem(system, systemText);
+    system.rect.text = systemText;
+    systemText.rect = system.rect;
+    system.rect.system = system;
 
-    system.ellipse.mouseover(OnSystemHover);
-    system.ellipse.mouseout(OnSystemHoverOut);
-    system.ellipse.mousedown(OnSystemClick);
+    ColorSystem(system);
+
+    system.rect.mouseover(OnSystemHover);
+    system.rect.mouseout(OnSystemHoverOut);
+    system.rect.mousedown(OnSystemClick);
     systemText.mouseover(OnSystemHover);
     systemText.mouseout(OnSystemHoverOut);
     systemText.mousedown(OnSystemClick);
 }
 
-function GetSystemX(indentX, system) {
-    if(system) return 55 + indentX * system.x;
-    else alert("system is null or undefined");
+function GetSystemX(system) {
+    return (RECT_WIDTH + PARENT_CHILD_HORIZONTAL_OFFSET) * system.x;
 }
 
-function GetSystemY(indentY, system) {
-    if(system) return 40 + indentY * system.y;
-    else alert("system is null or undefined");
+function GetSystemY(system) {
+    return (RECT_HEIGHT + VERTICAL_LEVEL_OFFSET) * system.y;
 }
 
-function ColorSystem(system, sysText) {
-    if(!system) {
-        alert("system is null or undefined");
-        return;
-    }
+function ColorSystem(system) {
+    system.rect.node.setAttribute('class', system.type);
+}
 
-    var sysColor = "#f00";
-    var sysStroke = "#fff";
-    var sysStrokeWidth = 2;
-    var textFontSize = 12;
-    var textColor = "#000";
-
-    if(system.x < 1) {
-        // root
-        sysColor = "#A600A6";
-        sysStroke = "#6A006A";
-        textColor = "#fff";
-        textFontSize = 14;
+function GetParentConnRectText(connection) {
+    var text;
+    if(connection.facing_down) {
+        text = connection.wormhole.sig;
+        if(connection.wormhole.static) text += ' (S)';
     }
+    else text = 'K162';
+
+    if(connection.parent_celestial) text += '\nP' + connection.parent_celestial;
+
+    return text;
+}
+
+function GetChildConnRectText(connection) {
+    var text;
+    if(connection.facing_down) text = 'K162';
     else {
-        // not selected
-        switch(system.type) {
-            case "null":
-                sysColor = "#CC0000";
-                sysStroke = "#840000";
-                textColor = "#fff";
-                break;
-            case "low":
-                sysColor = "#93841E";
-                sysStroke = "#7D5500";
-                textColor = "#fff";
-                break;
-            case "high":
-                sysColor = "#009F00";
-                sysStroke = "#006600";
-                textColor = "#fff";
-                break;
-            default:
-                sysColor = "#F2F4FF";
-                sysStroke = "#0657B9";
-                textColor = "#0974EA";
-                break;
+        if(connection.wormhole.sig == 'K162') text = '?';
+        else {
+            text = connection.wormhole.sig;
+            if(connection.wormhole.static) text += ' (S)';
         }
     }
 
-    if(system.name) {
-        if(system.name.length > 16) textFontSize = 8;
-        else if(system.name.length > 11) textFontSize = 9;
-    }
+    if(connection.child_celestial) text += '\nP' + connection.child_celestial;
 
-    system.ellipse.attr({'fill' : sysColor, 'stroke' : sysStroke,
-                        'stroke-width' : sysStrokeWidth, 'cursor' : "pointer"});
-    sysText.attr({'fill' : textColor, 'font-size' : textFontSize,
-                  'cursor' : "pointer"});
+    return text;
 }
 
-function ConnectSystems(paper, parentSystem, childSystem, lineColor) {
-    var parentBox = parentSystem.ellipse.getBBox();
-    var childBox = childSystem.ellipse.getBBox();
-    var startY = parentBox.y + (parentBox.height / 2);
-    var path;
-    if(parentSystem.y == childSystem.y)
-        path = paper.path("M" + parentBox.x2 + "," + startY + "L" + childBox.x +
-                          "," + startY);
+function GetConnectionLifeText(connection) {
+    var text;
+    if(connection.wormhole.sig == 'K162') text = '?';
     else {
-        var endY = childBox.y + (childBox.height / 2);
-        var parentControlX = parentBox.x2 + ((childBox.x - parentBox.x2) / 2);
-        var childControlX = childBox.x - ((childBox.x - parentBox.x2) / 2);
-        path = paper.path("M" + parentBox.x2 + "," + startY +
-                          "C" + parentControlX + "," + startY + "," +
-                          childControlX + "," + endY + "," +
-                          childBox.x + "," + endY);
+        var connectionDate = new Date(connection.date);
+        var utcHours = connectionDate.getHours();
+        connectionDate.setHours(0);
+        connectionDate = connectionDate.setUTCHours(utcHours);
+        var dateDiffHours = ((Date.now() - connectionDate) /
+                             (1000 * 60 * 60)).toFixed();
+        switch(connection.life_level) {
+            case 0:
+                if(connection.wormhole.life - dateDiffHours > 0)
+                    text = '~' + (connection.wormhole.life - dateDiffHours);
+                break;
+            case 1:
+                if((connection.wormhole.life * 0.25) - dateDiffHours > 0)
+                    text = '>' + ((connection.wormhole.life * 0.25) -
+                        dateDiffHours);
+                break;
+            case 2:
+                if((connection.wormhole.life * 0.25) - dateDiffHours > 0)
+                    text = '<' + ((connection.wormhole.life * 0.25) -
+                        dateDiffHours);
+                break;
+        }
+        if(text) text += 'hr';
+        else text = 'DEAD';
     }
-    path.attr('stroke', lineColor);
-    path.childNode = childSystem.ellipse;
+    return text;
+}
+
+function GetConnectionJumpMassText(connection) {
+    if(connection.wormhole.sig == 'K162') return '?';
+    else return (connection.wormhole.jump_mass / KG_TO_MILKG) + 'jmp';
+}
+
+function GetConnectionMassText(connection) {
+    var text;
+    if(connection.wormhole.sig == 'K162') text = '?';
+    else {
+        switch(connection.mass_level) {
+            case 0:
+                text = ((connection.wormhole.total_mass * 0.5) / KG_TO_MILKG) +
+                    '-' + (connection.wormhole.total_mass / KG_TO_MILKG);
+                break;
+            case 1:
+                text = ((connection.wormhole.total_mass * 0.1) / KG_TO_MILKG) +
+                    '-' + ((connection.wormhole.total_mass * 0.5) /
+                    KG_TO_MILKG);
+                break;
+            case 2:
+                text = '0-' + ((connection.wormhole.total_mass * 0.1) /
+                    KG_TO_MILKG);
+                break;
+        }
+        if(connection.wormhole.mass_regen)
+            text += ' +' + (connection.wormhole.mass_regen / KG_TO_MILKG);
+    }
+    return text;
+}
+
+function ConnectSystems(paper, parentSystem, childSystem) {
+    var parentBox = parentSystem.rect.getBBox();
+    var childBox = childSystem.rect.getBBox();
+
+    var parentConnRect = paper.rect(
+        parentBox.x2 + PARENT_CONNECTION_SQUARE_OFFSET, childBox.y,
+        CONNECTION_SQUARE_SIZE, CONNECTION_SQUARE_SIZE);
+    var childConnRect = paper.rect(childBox.x - CONNECTION_SQUARE_SIZE -
+        CHILD_CONNECTION_SQUARE_OFFSET, childBox.y, CONNECTION_SQUARE_SIZE,
+        CONNECTION_SQUARE_SIZE);
+
+    var parentConnRectBox = parentConnRect.getBBox();
+    var childConnRectBox = childConnRect.getBBox();
+    var triangleTopY = parentConnRectBox.y + (CONNECTION_SQUARE_SIZE / 2) -
+                       (CONNECTION_TRIANGLE_WIDTH / 2);
+    var triangleMiddleY = parentConnRectBox.y + (CONNECTION_SQUARE_SIZE / 2);
+    var triangleBottomY = parentConnRectBox.y + (CONNECTION_SQUARE_SIZE / 2) +
+                          (CONNECTION_TRIANGLE_WIDTH / 2);
+
+    var parentConnRectTriangle = paper.path(
+        'M' + parentConnRectBox.x2 + ',' + triangleTopY +
+        'L' + (parentConnRectBox.x2 + CONNECTION_TRIANGLE_HEIGHT) + ',' +
+              triangleMiddleY +
+        'L' + parentConnRectBox.x2 + ',' + triangleBottomY +
+        'Z');
+
+    var childConnRectTriangle = paper.path(
+        'M' + childConnRectBox.x + ',' + triangleTopY +
+        'L' + (childConnRectBox.x - CONNECTION_TRIANGLE_HEIGHT) + ',' +
+              triangleMiddleY +
+        'L' + childConnRectBox.x + ',' + triangleBottomY +
+        'Z');
+
+    parentConnRect.triangle = parentConnRectTriangle;
+    childConnRect.triangle = childConnRectTriangle;
+
+    parentConnRect.node.classList.add('system-connection');
+    childConnRect.node.classList.add('system-connection');
+    parentConnRectTriangle.node.classList.add('system-connection');
+    childConnRectTriangle.node.classList.add('system-connection');
+
+    var path = paper.path(
+        "M" + (parentConnRectBox.x2 + CONNECTION_SQUARE_PATH_OFFSET) + "," +
+              triangleMiddleY +
+        "L" + (childConnRectBox.x - CONNECTION_SQUARE_PATH_OFFSET) + "," +
+              triangleMiddleY);
+
+    path.childNode = childSystem.rect;
+    path.childConnRect = childConnRect;
+    path.parentConnRect = parentConnRect;
     path.connection = childSystem.parent_connection;
-    path.mousedown(OnConnectionClick);
-    childSystem.ellipse.pathToParent = path;
+    childSystem.rect.pathToParent = path;
+    parentConnRect.path = path;
+    childConnRect.path = path;
+
+    if(childSystem.parent_connection) {
+        var connection = childSystem.parent_connection;
+        var parentConnRectText = GetParentConnRectText(connection);
+        var childConnRectText = GetChildConnRectText(connection);
+
+        var connectionLife = GetConnectionLifeText(connection);
+        var connectionJumpMass = GetConnectionJumpMassText(connection);
+        var connectionMass = GetConnectionMassText(connection);
+
+        var connectionLifeText = paper.text(parentConnRectBox.x2 +
+            CONNECTION_SQUARE_TEXT_OFFSET, triangleMiddleY -
+            CONNECTION_PATH_TEXT_VERTICAL_OFFSET, connectionLife);
+
+        var connectionJumpMassText = paper.text(childConnRectBox.x -
+            CONNECTION_SQUARE_TEXT_OFFSET, triangleMiddleY -
+            CONNECTION_PATH_TEXT_VERTICAL_OFFSET, connectionJumpMass);
+
+        var connectionMassText = paper.text(parentConnRectBox.x2 +
+            CONNECTION_SQUARE_PATH_OFFSET + (CONNECTION_PATH_LENGTH / 2),
+            triangleMiddleY + CONNECTION_PATH_TEXT_VERTICAL_OFFSET,
+            connectionMass);
+
+        parentConnRectText = paper.text(parentConnRectBox.x +
+            (CONNECTION_SQUARE_SIZE / 2), triangleMiddleY, parentConnRectText);
+        childConnRectText = paper.text(childConnRectBox.x +
+            (CONNECTION_SQUARE_SIZE / 2), triangleMiddleY, childConnRectText);
+
+        path.connectionLifeText = connectionLifeText;
+        path.connectionJumpMassText = connectionJumpMassText;
+        path.connectionMassText = connectionMassText;
+
+        path.node.classList.add('wormhole-connection');
+
+        parentConnRect.mousedown(OnConnectionClick);
+        childConnRect.mousedown(OnConnectionClick);
+        parentConnRectText.mousedown(OnConnectionClick);
+        childConnRectText.mousedown(OnConnectionClick);
+    }
+    else {
+        parentConnRectText = paper.text(parentConnRectBox.x +
+            (CONNECTION_SQUARE_SIZE / 2), triangleMiddleY, 'Gate');
+        childConnRectText = paper.text(childConnRectBox.x +
+            (CONNECTION_SQUARE_SIZE / 2), triangleMiddleY, 'Gate');
+
+        path.node.classList.add('system-connection');
+    }
+
+    parentConnRect.text = parentConnRectText;
+    childConnRect.text = childConnRectText;
+    parentConnRectText.path = path;
+    childConnRectText.path = path;
 }
 
 function OnSystemHover() {
-    var ellipse;
-    if(this.type == 'ellipse') ellipse = this;
-    else ellipse = this.ellipse;
-    var system = ellipse.system;
-
-    ellipse.attr('stroke-width', 4);
+    var rect;
+    if(this.type == 'rect') rect = this;
+    else rect = this.rect;
+    var system = rect.system;
 
     if(!system.$infoPanel && !system.$actionPanel) {
-        var ellipseBox = ellipse.getBBox();
+        rect.node.classList.add('hover');
+
+        var rectBox = rect.getBBox();
         system.$infoPanel = $('#stash .system-info').clone()
-                                                    .appendTo('#systemsHolder');
-        system.$infoPanel.css({'top': ellipseBox.y, 'left': ellipseBox.x2});
+                                                    .appendTo('#map');
+        system.$infoPanel.css({'top': rectBox.y, 'left': rectBox.x2});
         system.$infoPanel.children('#system-info-author').append(system.author);
         system.$infoPanel.children('#system-info-date').append(system.date);
         if(system.wspace_effect)
@@ -605,24 +740,24 @@ function OnSystemHover() {
 }
 
 function OnSystemHoverOut() {
-    var ellipse;
-    if(this.type == 'ellipse') ellipse = this;
-    else ellipse = this.ellipse;
-    var system = ellipse.system;
+    var rect;
+    if(this.type == 'rect') rect = this;
+    else rect = this.rect;
+    var system = rect.system;
 
     if(system.$infoPanel) {
-        if(!system.locked) ellipse.attr('stroke-width', 2);
+        if(!system.locked) rect.node.classList.remove('hover');
         system.$infoPanel.remove();
         system.$infoPanel = null;
     }
     else if(!system.$actionPanel) {
-        if(!system.locked) ellipse.attr('stroke-width', 2);
+        if(!system.locked) rect.node.classList.remove('hover');
     }
 }
 
 function ClearSelection(softClear) {
     paper.forEach(function(el) {
-        if((el.type == 'ellipse' && el.system.$actionPanel) ||
+        if((el.type == 'rect' && el.system && el.system.$actionPanel) ||
            (el.type == 'path' && el.connection && el.connection.$actionPanel)) {
             if(!softClear) {
                 $.ajax({
@@ -634,8 +769,8 @@ function ClearSelection(softClear) {
                     }
                 });
             }
-            if(el.type == 'ellipse') {
-                el.attr('stroke-width', 2);
+            if(el.type == 'rect') {
+                el.node.classList.remove('hover');
                 el.system.$actionPanel.remove();
                 el.system.$actionPanel = null;
             }
@@ -648,7 +783,7 @@ function ClearSelection(softClear) {
     });
 }
 
-function ActivateNode(system, ellipse) {
+function ActivateNode(system, rect) {
     if(system.$infoPanel) {
         ClearSelection(true);
 
@@ -656,24 +791,24 @@ function ActivateNode(system, ellipse) {
         system.$actionPanel = system.$infoPanel;
         system.$infoPanel = null;
         system.$actionPanel.attr('class', $stashActionPanel.attr('class'));
-        system.$actionPanel.attr('data-ellipse-id', ellipse.id);
+        system.$actionPanel.attr('data-rect-id', rect.id);
         system.$actionPanel.html($stashActionPanel.html());
     }
     else if(!system.$actionPanel) {
         ClearSelection(true);
 
-        var ellipseBox = ellipse.getBBox();
+        var rectBox = rect.getBBox();
         system.$actionPanel = $('#stash .system-actions').clone()
-                              .appendTo('#systemsHolder');
-        system.$actionPanel.css({'top': ellipseBox.y, 'left': ellipseBox.x2});
+                              .appendTo('#map');
+        system.$actionPanel.css({'top': rectBox.y, 'left': rectBox.x2});
     }
 }
 
 function OnSystemClick() {
-    var ellipse;
-    if(this.type == 'ellipse') ellipse = this;
-    else ellipse = this.ellipse;
-    var system = ellipse.system;
+    var rect;
+    if(this.type == 'rect') rect = this;
+    else rect = this.rect;
+    var system = rect.system;
 
     if(!system.locked && !system.$actionPanel) {
         if(system.children.length) {
@@ -711,7 +846,7 @@ function OnSystemClick() {
                 'page_name': window.location.pathname.split('/')[1]
             },
             success: function() {
-                ActivateNode(system, ellipse);
+                ActivateNode(system, rect);
             },
             error: function(xhr, textStatus, errorThrown) {
                 alert(errorThrown);
@@ -721,9 +856,9 @@ function OnSystemClick() {
 }
 
 function OnConnectionClick() {
-    if(this.connection && !this.connection.locked &&
-       !this.connection.$actionPanel) {
-        var path = this;
+    var path = this.path;
+    if(path.connection && !path.connection.locked &&
+       !path.connection.$actionPanel) {
         $.ajax({
             type: 'POST',
             url: '/lock_object/',
@@ -733,13 +868,13 @@ function OnConnectionClick() {
             },
             success: function() {
                 ClearSelection(true);
-                var pathBox = path.getBBox();
+                var rectBox = path.childConnRect.getBBox();
                 path.connection.$actionPanel =
                     $('#stash .connection-actions').clone()
-                    .appendTo('#systemsHolder');
+                    .appendTo('#map');
                 path.connection.$actionPanel.attr('data-path-id', path.id);
                 path.connection.$actionPanel.css(
-                    {'top': pathBox.y, 'left': pathBox.x2});
+                    {'top': rectBox.y, 'left': rectBox.x2});
             },
             error: function(xhr, textStatus, errorThrown) {
                 alert(errorThrown);
@@ -757,13 +892,13 @@ function TraverseToNextNode(currentNode) {
         return currentNode.parent;
 }
 
-function LockNode(ellipse, username, noTraversal) {
-    var currentNode = ellipse.system;
-    currentNode.ellipse.attr({'stroke-width': 4, 'fill': 'gray'});
+function LockNode(rect, username, noTraversal) {
+    var currentNode = rect.system;
+    rect.node.classList.add('locked');
     currentNode.locked = username;
     if(!noTraversal) {
-        if(ellipse.pathToParent && ellipse.pathToParent.connection)
-            ellipse.pathToParent.connection.locked = username;
+        if(rect.pathToParent && rect.pathToParent.connection)
+            rect.pathToParent.connection.locked = username;
         if(currentNode.children.length) {
             while(currentNode) {
                 if(currentNode.children.length &&
@@ -771,14 +906,13 @@ function LockNode(ellipse, username, noTraversal) {
                     currentNode = currentNode.children[0];
                 else
                     currentNode = TraverseToNextNode(currentNode);
-                if(currentNode.id == ellipse.system.id) break;
+                if(currentNode.id == rect.system.id) break;
                 if(!currentNode.locked) {
-                    currentNode.ellipse.attr({'stroke-width': 4,
-                                              'fill': 'gray'});
+                    currentNode.rect.node.classList.add('locked');
                     currentNode.locked = username;
-                    if(currentNode.ellipse.pathToParent &&
-                       currentNode.ellipse.pathToParent.connection)
-                        LockConnection(currentNode.ellipse.pathToParent,
+                    if(currentNode.rect.pathToParent &&
+                       currentNode.rect.pathToParent.connection)
+                        LockConnection(currentNode.rect.pathToParent,
                                        username, true);
                 }
             }
@@ -786,10 +920,10 @@ function LockNode(ellipse, username, noTraversal) {
     }
 }
 
-function UnlockNode(ellipse, noTraversal) {
-    var currentNode = ellipse.system;
+function UnlockNode(rect, noTraversal) {
+    var currentNode = rect.system;
     var locker = currentNode.locked;
-    ColorSystem(currentNode, currentNode.ellipse.text);
+    rect.node.classList.remove('locked');
     currentNode.locked = null;
     if(!noTraversal && currentNode.children.length) {
         while(currentNode) {
@@ -797,13 +931,13 @@ function UnlockNode(ellipse, noTraversal) {
                 currentNode = currentNode.children[0];
             else
                 currentNode = TraverseToNextNode(currentNode);
-            if(currentNode.id == ellipse.system.id) break;
+            if(currentNode.id == rect.system.id) break;
             if(currentNode.locked && currentNode.locked == locker) {
-                ColorSystem(currentNode, currentNode.ellipse.text);
+                currentNode.rect.node.classList.remove('locked');
                 currentNode.locked = null;
-                if(currentNode.ellipse.pathToParent &&
-                   currentNode.ellipse.pathToParent.connection)
-                    UnlockConnection(currentNode.ellipse.pathToParent);
+                if(currentNode.rect.pathToParent &&
+                   currentNode.rect.pathToParent.connection)
+                    UnlockConnection(currentNode.rect.pathToParent);
             }
         }
     }
@@ -811,17 +945,41 @@ function UnlockNode(ellipse, noTraversal) {
 
 function LockConnection(path, username, noTraversal) {
     path.connection.locked = username;
+    path.childConnRect.node.classList.add('locked');
+    path.parentConnRect.node.classList.add('locked');
     if(!noTraversal) LockNode(path.childNode, username, true);
 }
 
 function UnlockConnection(path) {
     path.connection.locked = null;
+    path.childConnRect.node.classList.remove('locked');
+    path.parentConnRect.node.classList.remove('locked');
     UnlockNode(path.childNode, true);
 }
 
+function MoveNodeDown(rect, distance) {
+    rect.transform('...t0,' + distance);
+    rect.text.transform('...t0,' + distance);
+    rect.pathToParent.parentConnRect.transform('...t0,' + distance);
+    rect.pathToParent.parentConnRect.triangle.transform('...t0,' + distance);
+    rect.pathToParent.parentConnRect.text.transform('...t0,' + distance);
+    rect.pathToParent.childConnRect.transform('...t0,' + distance);
+    rect.pathToParent.childConnRect.triangle.transform('...t0,' + distance);
+    rect.pathToParent.childConnRect.text.transform('...t0,' + distance);
+    rect.pathToParent.transform('...t0,' + distance);
+
+    if(rect.pathToParent.connection) {
+        rect.pathToParent.connectionLifeText.transform('...t0,' + distance);
+        rect.pathToParent.connectionJumpMassText.transform('...t0,' + distance);
+        rect.pathToParent.connectionMassText.transform('...t0,' + distance);
+    }
+}
+
+
 function AddNode(node) {
     paper.forEach(function(elem) {
-        if(elem.type == 'ellipse' && elem.system.id == node.parent_node_id) {
+        if(elem.type == 'rect' && elem.system &&
+           elem.system.id == node.parent_node_id) {
             node.parent = elem.system;
             node.x = elem.system.x + 1;
             if(elem.system.children.length) {
@@ -841,22 +999,10 @@ function AddNode(node) {
                 node.y = nodeChainY + 1;
 
                 paper.forEach(function(el) {
-                    if(el.type == 'ellipse' && el.system.y >= node.y) {
+                    if(el.type == 'rect' && el.system &&
+                       el.system.y >= node.y) {
                         el.system.y++;
-                        el.transform('...t0,' + indentY);
-                        el.text.transform('...t0,' + indentY);
-                        if(el.system.x < node.x &&
-                           el.system.parent.y < node.y &&
-                           el.pathToParent.attrs.path[1][0] == 'C') {
-                            el.pathToParent.attrs.path[1][4] =
-                                el.pathToParent.attrs.path[1][4] + indentY;
-                            el.pathToParent.attrs.path[1][6] =
-                                el.pathToParent.attrs.path[1][6] + indentY;
-                            el.pathToParent.attr('path',
-                                el.pathToParent.attrs.path[0].join() +
-                                el.pathToParent.attrs.path[1].join());
-                        }
-                        else el.pathToParent.transform('...t0,' + indentY);
+                        MoveNodeDown(el, RECT_HEIGHT + VERTICAL_LEVEL_OFFSET);
                     }
                 });
             }
@@ -875,16 +1021,35 @@ function AddNode(node) {
             }
             node.index = node.parent.children.length;
             elem.system.children.push(node);
-            DrawSystem(paper, indentX, indentY, node);
+            DrawSystem(paper, node);
 
             return;
         }
     });
 }
 
+function MoveNodeUp(rect, distance) {
+    rect.transform('...t0,-' + distance);
+    rect.text.transform('...t0,-' + distance);
+    rect.pathToParent.parentConnRect.transform('...t0,-' + distance);
+    rect.pathToParent.parentConnRect.triangle.transform('...t0,-' + distance);
+    rect.pathToParent.parentConnRect.text.transform('...t0,-' + distance);
+    rect.pathToParent.childConnRect.transform('...t0,-' + distance);
+    rect.pathToParent.childConnRect.triangle.transform('...t0,-' + distance);
+    rect.pathToParent.childConnRect.text.transform('...t0,-' + distance);
+    rect.pathToParent.transform('...t0,-' + distance);
+
+    if(rect.pathToParent.connection) {
+        rect.pathToParent.connectionLifeText.transform('...t0,-' + distance);
+        rect.pathToParent.connectionJumpMassText.transform(
+            '...t0,-' + distance);
+        rect.pathToParent.connectionMassText.transform('...t0,-' + distance);
+    }
+}
+
 function DeleteNode(nodeID) {
     paper.forEach(function(el) {
-        if(el.type == 'ellipse' && el.system.id == nodeID) {
+        if(el.type == 'rect' && el.system && el.system.id == nodeID) {
             var currentNode = el.system;
             var nodeChainWidth = 1;
             while(currentNode) {
@@ -894,9 +1059,25 @@ function DeleteNode(nodeID) {
                     if((currentNode.y - el.system.y + 1) > nodeChainWidth)
                         nodeChainWidth = currentNode.y - el.system.y + 1;
 
-                    currentNode.ellipse.pathToParent.remove();
-                    currentNode.ellipse.text.remove();
-                    currentNode.ellipse.remove();
+                    if(currentNode.rect.pathToParent.connection) {
+                        currentNode.rect.pathToParent.connectionLifeText
+                            .remove();
+                        currentNode.rect.pathToParent.connectionJumpMassText
+                            .remove();
+                        currentNode.rect.pathToParent.connectionMassText
+                            .remove();
+                    }
+                    currentNode.rect.pathToParent.parentConnRect.triangle
+                        .remove();
+                    currentNode.rect.pathToParent.parentConnRect.text.remove();
+                    currentNode.rect.pathToParent.parentConnRect.remove();
+                    currentNode.rect.pathToParent.childConnRect.triangle
+                        .remove();
+                    currentNode.rect.pathToParent.childConnRect.text.remove();
+                    currentNode.rect.pathToParent.childConnRect.remove();
+                    currentNode.rect.pathToParent.remove();
+                    currentNode.rect.text.remove();
+                    currentNode.rect.remove();
 
                     if(currentNode.id == nodeID) {
                         if(currentNode.y == currentNode.parent.y &&
@@ -907,54 +1088,18 @@ function DeleteNode(nodeID) {
                             i < currentNode.parent.children.length; i++) {
                             currentNode.parent.children[i].index--;
                         }
+
                         currentNode.parent.children.splice(currentNode.index,
                                                            1);
 
                         if(nodeChainWidth) {
                             paper.forEach(function(elem) {
-                                if(elem.type == 'ellipse' &&
+                                if(elem.type == 'rect' && elem.system &&
                                    elem.system.y > currentNode.y) {
-                                    if((elem.system.x < currentNode.x ||
-                                           (elem.system.x == currentNode.x &&
-                                               elem.system.parent.id ==
-                                               currentNode.parent.id)) &&
-                                       elem.system.parent.y <= currentNode.y &&
-                                       elem.pathToParent.attrs.path[1][0] ==
-                                       'C') {
-                                        if(elem.system.index) {
-                                            elem.pathToParent.attrs.path[1][4] =
-                                                elem.pathToParent.attrs
-                                                    .path[1][4] -
-                                                (indentY * nodeChainWidth);
-                                            elem.pathToParent.attrs.path[1][6] =
-                                                elem.pathToParent.attrs
-                                                    .path[1][6] -
-                                                (indentY * nodeChainWidth);
-                                            elem.pathToParent.attr('path',
-                                                elem.pathToParent.attrs.path[0]
-                                                    .join() +
-                                                elem.pathToParent.attrs.path[1]
-                                                    .join());
-                                        }
-                                        else {
-                                            elem.pathToParent.attr('path',
-                                                elem.pathToParent.attrs.path[0]
-                                                    .join() +
-                                                'L' + elem.pathToParent.attrs
-                                                          .path[1][5] +
-                                                ',' + elem.pathToParent.attrs
-                                                          .path[0][2]);
-                                        }
-                                    }
-                                    else
-                                        elem.pathToParent.transform('...t0,-' +
-                                            (indentY * nodeChainWidth));
-
                                     elem.system.y -= nodeChainWidth;
-                                    elem.transform('...t0,-' +
-                                        (indentY * nodeChainWidth));
-                                    elem.text.transform('...t0,-' +
-                                        (indentY * nodeChainWidth));
+                                    MoveNodeUp(elem, (RECT_HEIGHT +
+                                        VERTICAL_LEVEL_OFFSET) *
+                                        nodeChainWidth);
                                 }
                             });
                         }
@@ -975,7 +1120,7 @@ function DeleteNode(nodeID) {
     var maxX = 0;
     var maxY = 0;
     paper.forEach(function(el) {
-        if(el.type == 'ellipse') {
+        if(el.type == 'rect' && el.system) {
             if(el.system.x > maxX) maxX = el.system.x;
             if(el.system.y > maxY) maxY = el.system.y;
         }
@@ -987,7 +1132,7 @@ function DeleteNode(nodeID) {
 
 function UpdateNode(node) {
     paper.forEach(function(el) {
-        if(el.type == 'ellipse' && el.system.id == node.id) {
+        if(el.type == 'rect' && el.system && el.system.id == node.id) {
             el.system.author = node.author;
             el.system.date = node.date;
             if(el.system.name != node.name) {
@@ -995,7 +1140,7 @@ function UpdateNode(node) {
                 el.text.attr('text', node.name + '\n(' + node.type + ')');
                 if(el.system.type != node.type) {
                     el.system.type = node.type;
-                    ColorSystem(el.system, el.text);
+                    ColorSystem(el.system);
                 }
                 el.system.region = node.region;
             }
@@ -1008,24 +1153,56 @@ function UpdateNode(node) {
 
 function UpdateConnection(connection) {
     paper.forEach(function(el) {
-        if(el.type == 'ellipse' && el.pathToParent &&
+        if(el.type == 'rect' && el.pathToParent &&
            el.pathToParent.connection &&
            el.pathToParent.connection.id == connection.id) {
             var curConnection = el.pathToParent.connection;
             curConnection.author = connection.author;
-            curConnection.parent_celestial = connection.parent_celestial;
-            curConnection.child_celestial = connection.child_celestial;
-            curConnection.life_level = connection.life_level;
-            curConnection.mass_level = connection.mass_level;
-            if(curConnection.wormhole_sig != connection.wormhole_sig) {
-                curConnection.wormhole_sig = connection.wormhole_sig;
+
+            if(curConnection.parent_celestial != connection.parent_celestial ||
+               curConnection.wormhole.sig != connection.wormhole.sig) {
+                curConnection.parent_celestial = connection.parent_celestial;
+                el.pathToParent.parentConnRect.text.attr('text',
+                    GetParentConnRectText(connection));
+            }
+
+            if(curConnection.child_celestial != connection.child_celestial ||
+               curConnection.wormhole.sig != connection.wormhole.sig) {
+                curConnection.child_celestial = connection.child_celestial;
+                el.pathToParent.childConnRect.text.attr('text',
+                    GetChildConnRectText(connection));
+            }
+
+            if(curConnection.life_level != connection.life_level ||
+               curConnection.wormhole.life != connection.wormhole.life) {
+                curConnection.life_level = connection.life_level;
+                el.pathToParent.connectionLifeText.attr('text',
+                    GetConnectionLifeText(connection));
+            }
+
+            if(curConnection.mass_level != connection.mass_level ||
+               curConnection.wormhole.total_mass !=
+               connection.wormhole.total_mass) {
+                curConnection.mass_level = connection.mass_level;
+                el.pathToParent.connectionMassText.attr('text',
+                    GetConnectionMassText(connection));
+            }
+
+            if(curConnection.wormhole.sig != connection.wormhole.sig) {
+                if(curConnection.wormhole.jump_mass !=
+                   connection.wormhole.jump_mass) {
+                    el.pathToParent.connectionJumpMassText.attr('text',
+                        GetConnectionJumpMassText(connection));
+                }
+
+                curConnection.wormhole = connection.wormhole;
+
                 if(!el.system.name && curConnection.facing_down &&
                    connection.wormhole_type &&
                    el.system.type != connection.wormhole_type) {
                     el.system.type = connection.wormhole_type;
-                    el.text.attr('text', SYSTEM_PLACEHOLDER_NAME + '\n(' +
-                                 el.system.type + ')');
-                    ColorSystem(el.system, el.text);
+                    el.text.attr('text', GetSystemText(el.system));
+                    ColorSystem(el.system);
                 }
             }
             return;
@@ -1043,7 +1220,7 @@ function GetUpdates() {
             if(data.object_lock) {
                 if(data.object_lock.username) {
                     paper.forEach(function(el) {
-                        if(el.type == 'ellipse' && el.system.locked &&
+                        if(el.type == 'rect' && el.system && el.system.locked &&
                            el.system.locked == data.object_lock.username)
                             UnlockNode(el);
                         else if(el.type == 'path' && el.connection &&
@@ -1055,7 +1232,7 @@ function GetUpdates() {
                 }
                 paper.forEach(function(el) {
                     if(data.object_lock.type == 'node' &&
-                       el.type == 'ellipse' &&
+                       el.type == 'rect' && el.system &&
                        el.system.id == data.object_lock.id) {
                         if(data.object_lock.username)
                             LockNode(el, data.object_lock.username);
