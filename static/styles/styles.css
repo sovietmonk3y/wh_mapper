@@ -7,8 +7,17 @@ a {
     color: white;
 }
 
+select {
+    height: 40px;
+    width: 300px;
+}
+
 #create-page {
+    height: 40px;
+    width: 110px;
+    border: 0px;
     background-color: rgb(41, 128, 185);
+    color: white;
 }
 
 #stash {
@@ -19,8 +28,9 @@ a {
     position: relative;
 }
 
-.system-info, .system-actions, .connection-actions, .new-system-form,
-.edit-system-form, .new-connection-form, .edit-connection-form {
+.system-info, .system-actions, .connection-info, .connection-actions,
+.new-system-form, .edit-system-form, .new-connection-form,
+.edit-connection-form {
     border: 1px solid #80ADC1;
 
     border-radius: 10px;
@@ -77,8 +87,11 @@ rect.hover {
 rect {
     fill: #4e4e4e;
     stroke: #4e4e4e;
+    stroke-width: 0;
 }
 
-rect.locked {
-    opacity: 0.2;
+.lock-overlay {
+    position: absolute;
+    background: rgba(0, 0, 0, .6) url(/static/images/lock-icon.png) 50% 50%
+                no-repeat;
 }

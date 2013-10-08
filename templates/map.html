@@ -39,7 +39,7 @@
                     {% endif %}>{{ map_page }}</option>
             {% endfor %}
         </select>
-        <a id="create-page" href="">+ New Map</a>
+        <input id="create-page" type="button" value="+ New Map">
         <br/><br/>
         Active Users<br/>
         <span id="user-list">
@@ -90,6 +90,14 @@
                 <a id="add-system" href="">Add system</a><br/>
                 <a id="add-connection" href="">Add connection</a><br/><br/><br/>
                 <a id="delete-system" href="">Delete system</a>
+            </div>
+
+            <div class="connection-info">
+                <div id="connection-info-author">Author: </div>
+                <div id="connection-info-date">Discovered: </div>
+                <div id="connection-info-lock" hidden="true">
+                  <br/>LOCKED BY:<br/>
+                </div>
             </div>
 
             <div class="connection-actions">
@@ -182,6 +190,8 @@
                     </table>
                 </form>
             </div>
+
+            <div class="lock-overlay"></div>
         </div>
     </body>
 </html>

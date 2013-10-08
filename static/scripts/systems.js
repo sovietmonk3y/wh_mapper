@@ -689,8 +689,17 @@ function ConnectSystems(paper, parentSystem, childSystem) {
 
         path.node.classList.add('wormhole-connection');
 
+        parentConnRect.mouseover(OnConnectionHover);
+        childConnRect.mouseover(OnConnectionHover);
+        parentConnRect.mouseout(OnConnectionHoverOut);
+        childConnRect.mouseout(OnConnectionHoverOut);
         parentConnRect.mousedown(OnConnectionClick);
         childConnRect.mousedown(OnConnectionClick);
+
+        parentConnRectText.mouseover(OnConnectionHover);
+        childConnRectText.mouseover(OnConnectionHover);
+        parentConnRectText.mouseout(OnConnectionHoverOut);
+        childConnRectText.mouseout(OnConnectionHoverOut);
         parentConnRectText.mousedown(OnConnectionClick);
         childConnRectText.mousedown(OnConnectionClick);
     }
@@ -711,16 +720,17 @@ function ConnectSystems(paper, parentSystem, childSystem) {
 
 function OnSystemHover() {
     var rect;
-    if(this.type == 'rect') rect = this;
+    if(this.tagName && this.tagName.toLowerCase() == 'div')
+        rect = paper.getById($(this).attr('data-rect-id'));
+    else if(this.type == 'rect') rect = this;
     else rect = this.rect;
-    var system = rect.system;
 
+    var system = rect.system;
     if(!system.$infoPanel && !system.$actionPanel) {
-        rect.node.classList.add('hover');
+        if(!system.locked) rect.node.classList.add('hover');
 
         var rectBox = rect.getBBox();
-        system.$infoPanel = $('#stash .system-info').clone()
-                                                    .appendTo('#map');
+        system.$infoPanel = $('#stash .system-info').clone().appendTo('#map');
         system.$infoPanel.css({'top': rectBox.y, 'left': rectBox.x2});
         system.$infoPanel.children('#system-info-author').append(system.author);
         system.$infoPanel.children('#system-info-date').append(system.date);
@@ -741,17 +751,58 @@ function OnSystemHover() {
 
 function OnSystemHoverOut() {
     var rect;
-    if(this.type == 'rect') rect = this;
+    if(this.tagName && this.tagName.toLowerCase() == 'div')
+        rect = paper.getById($(this).attr('data-rect-id'));
+    else if(this.type == 'rect') rect = this;
     else rect = this.rect;
-    var system = rect.system;
 
+    var system = rect.system;
     if(system.$infoPanel) {
-        if(!system.locked) rect.node.classList.remove('hover');
+        rect.node.classList.remove('hover');
         system.$infoPanel.remove();
         system.$infoPanel = null;
     }
-    else if(!system.$actionPanel) {
-        if(!system.locked) rect.node.classList.remove('hover');
+}
+
+function OnConnectionHover() {
+    var path;
+    if(this.tagName && this.tagName.toLowerCase() == 'div')
+        path = paper.getById($(this).attr('data-path-id'));
+    else path = this.path;
+
+    var connection = path.connection;
+    if(!connection.$infoPanel && !connection.$actionPanel) {
+        if(!connection.locked) {
+            path.parentConnRect.node.classList.add('hover');
+            path.childConnRect.node.classList.add('hover');
+        }
+
+        var rectBox = path.childConnRect.getBBox();
+        connection.$infoPanel = $('#stash .connection-info').clone().appendTo(
+            '#map');
+        connection.$infoPanel.css({'top': rectBox.y, 'left': rectBox.x2});
+        connection.$infoPanel.children('#connection-info-author').append(
+            connection.author);
+        connection.$infoPanel.children('#connection-info-date').append(
+            connection.date);
+        if(connection.locked)
+            connection.$infoPanel.children('#connection-info-lock').append(
+                connection.locked).removeAttr('hidden');
+    }
+}
+
+function OnConnectionHoverOut() {
+    var path;
+    if(this.tagName && this.tagName.toLowerCase() == 'div')
+        path = paper.getById($(this).attr('data-path-id'));
+    else path = this.path;
+
+    var connection = path.connection;
+    if(connection.$infoPanel) {
+        path.parentConnRect.node.classList.remove('hover');
+        path.childConnRect.node.classList.remove('hover');
+        connection.$infoPanel.remove();
+        connection.$infoPanel = null;
     }
 }
 
@@ -785,8 +836,6 @@ function ClearSelection(softClear) {
 
 function ActivateNode(system, rect) {
     if(system.$infoPanel) {
-        ClearSelection(true);
-
         var $stashActionPanel = $('#stash .system-actions');
         system.$actionPanel = system.$infoPanel;
         system.$infoPanel = null;
@@ -795,8 +844,6 @@ function ActivateNode(system, rect) {
         system.$actionPanel.html($stashActionPanel.html());
     }
     else if(!system.$actionPanel) {
-        ClearSelection(true);
-
         var rectBox = rect.getBBox();
         system.$actionPanel = $('#stash .system-actions').clone()
                               .appendTo('#map');
@@ -815,9 +862,9 @@ function OnSystemClick() {
             var checkedDescendants = [];
             var currentNode = system;
             while(currentNode) {
-                if(system.children.length &&
-                   checkedDescendants.indexOf(system.children[0].id) == -1)
-                    currentNode = system.children[0];
+                if(currentNode.children.length &&
+                   checkedDescendants.indexOf(currentNode.children[0].id) == -1)
+                    currentNode = currentNode.children[0];
                 else
                     currentNode = TraverseToNextNode(currentNode);
 
@@ -846,6 +893,7 @@ function OnSystemClick() {
                 'page_name': window.location.pathname.split('/')[1]
             },
             success: function() {
+                ClearSelection(true);
                 ActivateNode(system, rect);
             },
             error: function(xhr, textStatus, errorThrown) {
@@ -855,10 +903,30 @@ function OnSystemClick() {
     }
 }
 
+function ActivateConnection(path) {
+    if(path.connection.$infoPanel) {
+        var $stashActionPanel = $('#stash .connection-actions');
+        path.connection.$actionPanel = path.connection.$infoPanel;
+        path.connection.$infoPanel = null;
+        path.connection.$actionPanel.attr('class',
+            $stashActionPanel.attr('class'));
+        path.connection.$actionPanel.attr('data-path-id', path.id);
+        path.connection.$actionPanel.html($stashActionPanel.html());
+    }
+    else if(!path.connection.$actionPanel) {
+        var rectBox = path.childConnRect.getBBox();
+        path.connection.$actionPanel = $('#stash .connection-actions').clone()
+            .appendTo('#map');
+        path.connection.$actionPanel.attr('data-path-id', path.id);
+        path.connection.$actionPanel.css(
+            {'top': rectBox.y, 'left': rectBox.x2});
+    }
+}
+
 function OnConnectionClick() {
     var path = this.path;
     if(path.connection && !path.connection.locked &&
-       !path.connection.$actionPanel) {
+       !path.connection.$actionPanel && !path.childNode.locked) {
         $.ajax({
             type: 'POST',
             url: '/lock_object/',
@@ -868,13 +936,7 @@ function OnConnectionClick() {
             },
             success: function() {
                 ClearSelection(true);
-                var rectBox = path.childConnRect.getBBox();
-                path.connection.$actionPanel =
-                    $('#stash .connection-actions').clone()
-                    .appendTo('#map');
-                path.connection.$actionPanel.attr('data-path-id', path.id);
-                path.connection.$actionPanel.css(
-                    {'top': rectBox.y, 'left': rectBox.x2});
+                ActivateConnection(path);
             },
             error: function(xhr, textStatus, errorThrown) {
                 alert(errorThrown);
@@ -892,13 +954,23 @@ function TraverseToNextNode(currentNode) {
         return currentNode.parent;
 }
 
+function LockOverlayOnNode(rect) {
+    var rectBox = rect.getBBox();
+    rect.$lockOverlay = $('#stash .lock-overlay').clone().appendTo('#map');
+    rect.$lockOverlay.css({'top' : rectBox.y, 'left' : rectBox.x,
+        'height' : rectBox.height, 'width' : rectBox.width});
+    rect.$lockOverlay.attr('data-rect-id', rect.id);
+    rect.$lockOverlay.on('mouseenter', OnSystemHover);
+    rect.$lockOverlay.on('mouseleave', OnSystemHoverOut);
+}
+
 function LockNode(rect, username, noTraversal) {
     var currentNode = rect.system;
-    rect.node.classList.add('locked');
     currentNode.locked = username;
+    LockOverlayOnNode(rect);
     if(!noTraversal) {
         if(rect.pathToParent && rect.pathToParent.connection)
-            rect.pathToParent.connection.locked = username;
+            LockConnection(rect.pathToParent, username, true);
         if(currentNode.children.length) {
             while(currentNode) {
                 if(currentNode.children.length &&
@@ -908,8 +980,8 @@ function LockNode(rect, username, noTraversal) {
                     currentNode = TraverseToNextNode(currentNode);
                 if(currentNode.id == rect.system.id) break;
                 if(!currentNode.locked) {
-                    currentNode.rect.node.classList.add('locked');
                     currentNode.locked = username;
+                    LockOverlayOnNode(currentNode.rect);
                     if(currentNode.rect.pathToParent &&
                        currentNode.rect.pathToParent.connection)
                         LockConnection(currentNode.rect.pathToParent,
@@ -923,8 +995,10 @@ function LockNode(rect, username, noTraversal) {
 function UnlockNode(rect, noTraversal) {
     var currentNode = rect.system;
     var locker = currentNode.locked;
-    rect.node.classList.remove('locked');
     currentNode.locked = null;
+    rect.$lockOverlay.remove();
+    if(rect.pathToParent && rect.pathToParent.connection)
+        UnlockConnection(rect.pathToParent, true);
     if(!noTraversal && currentNode.children.length) {
         while(currentNode) {
             if(currentNode.children.length && currentNode.children[0].locked)
@@ -933,11 +1007,11 @@ function UnlockNode(rect, noTraversal) {
                 currentNode = TraverseToNextNode(currentNode);
             if(currentNode.id == rect.system.id) break;
             if(currentNode.locked && currentNode.locked == locker) {
-                currentNode.rect.node.classList.remove('locked');
                 currentNode.locked = null;
+                currentNode.rect.$lockOverlay.remove();
                 if(currentNode.rect.pathToParent &&
                    currentNode.rect.pathToParent.connection)
-                    UnlockConnection(currentNode.rect.pathToParent);
+                    UnlockConnection(currentNode.rect.pathToParent, true);
             }
         }
     }
@@ -945,16 +1019,25 @@ function UnlockNode(rect, noTraversal) {
 
 function LockConnection(path, username, noTraversal) {
     path.connection.locked = username;
-    path.childConnRect.node.classList.add('locked');
-    path.parentConnRect.node.classList.add('locked');
+
+    var parentConnRectBox = path.parentConnRect.getBBox();
+    var childConnRectBox = path.childConnRect.getBBox();
+    path.connection.$lockOverlay = $('#stash .lock-overlay').clone().appendTo(
+        '#map');
+    path.connection.$lockOverlay.css({'top' : parentConnRectBox.y,
+        'left' : parentConnRectBox.x, 'height' : parentConnRectBox.height,
+        'width' : childConnRectBox.x2 - parentConnRectBox.x});
+    path.connection.$lockOverlay.attr('data-path-id', path.id);
+    path.connection.$lockOverlay.on('mouseenter', OnConnectionHover);
+    path.connection.$lockOverlay.on('mouseleave', OnConnectionHoverOut);
+
     if(!noTraversal) LockNode(path.childNode, username, true);
 }
 
-function UnlockConnection(path) {
+function UnlockConnection(path, noTraversal) {
     path.connection.locked = null;
-    path.childConnRect.node.classList.remove('locked');
-    path.parentConnRect.node.classList.remove('locked');
-    UnlockNode(path.childNode, true);
+    path.connection.$lockOverlay.remove();
+    if(!noTraversal) UnlockNode(path.childNode, true);
 }
 
 function MoveNodeDown(rect, distance) {
