@@ -315,18 +315,19 @@ $(document).ready(function() {
             });
         });
 
-        $('#map').on('click', '#edit-connection', function(e) {
-            e.preventDefault();
+        $('#map').on('click', '.connection-action-overlay .edit', function() {
+            var $container = $('#stash .new-connection-form').clone().dialog({
+                appendTo: '#map',
+                modal: true,
+                close: function(e) {
+                    $(e.target).dialog('destroy');
+                }
+            });
+            $container.attr('class', $container.attr('class').replace('new',
+                'edit'));
 
-            var $stashConnectionForm = $('#stash .new-connection-form');
-            var $container = $(this).parent();
-            var connection = paper.getById($container.attr('data-path-id'))
-                .connection;
-            $container.html($stashConnectionForm.html());
-            $container.attr('class', $stashConnectionForm.attr('class').replace(
-                'new', 'edit'));
-            $container.find('#wormhole-sig').val(connection.wormhole.sig)
-                .focus();
+            var connection = this.parentElement.connection;
+            $container.find('#wormhole-sig').val(connection.wormhole.sig);
             $container.find('#origin-celestial').val(
                 connection.parent_celestial);
             $container.find('#destination-celestial').val(
@@ -335,6 +336,8 @@ $(document).ready(function() {
                 '"]').attr('checked', true);
             $container.find('#mass-level[value="' + connection.mass_level +
                 '"]').attr('checked', true);
+
+            $container[0].connection = connection;
         });
 
         $('#map').on('submit', '.edit-connection-form', function(e) {
@@ -362,9 +365,8 @@ $(document).ready(function() {
 
             $.ajax({
                 type: 'PUT',
-                url: '/api/system_connection/' +
-                    paper.getById($formDiv.attr('data-path-id')).connection.id +
-                    '/',
+                url: '/api/system_connection/' + $formDiv[0].connection.id +
+                     '/',
                 data: {
                     'wormhole': wormholeSig,
                     'parent_celestial':
@@ -375,6 +377,7 @@ $(document).ready(function() {
                     'mass_level': $massLevel.val()
                 },
                 success: function(data) {
+                    $formDiv.dialog('destroy');
                     ClearSelection(true);
                     UpdateConnection(JSON.parse(data));
                 },
@@ -791,7 +794,7 @@ function OnConnectionHover() {
     else path = this.path;
 
     var connection = path.connection;
-    if(!connection.$infoPanel && !connection.$actionPanel) {
+    if(!connection.$infoPanel && !connection.$actionOverlay) {
         if(!connection.locked) {
             path.parentConnRect.node.classList.add('hover');
             path.childConnRect.node.classList.add('hover');
@@ -829,7 +832,8 @@ function OnConnectionHoverOut() {
 function ClearSelection(softClear) {
     paper.forEach(function(el) {
         if((el.type == 'rect' && el.system && el.system.$actionOverlay) ||
-           (el.type == 'path' && el.connection && el.connection.$actionPanel)) {
+           (el.type == 'path' && el.connection &&
+            el.connection.$actionOverlay)) {
             if(!softClear) {
                 $.ajax({
                     type: 'POST',
@@ -848,8 +852,8 @@ function ClearSelection(softClear) {
             else {
                 el.childConnRect.node.classList.remove('hover');
                 el.parentConnRect.node.classList.remove('hover');
-                el.connection.$actionPanel.remove();
-                el.connection.$actionPanel = null;
+                el.connection.$actionOverlay.remove();
+                el.connection.$actionOverlay = null;
             }
             return;
         }
@@ -858,8 +862,10 @@ function ClearSelection(softClear) {
 
 function ActivateNode(system, rect) {
     if(!system.$actionOverlay) {
-        system.$infoPanel.remove();
-        system.$infoPanel = null;
+        if(system.$infoPanel) {
+            system.$infoPanel.remove();
+            system.$infoPanel = null;
+        }
 
         var rectBox = rect.getBBox();
         system.$actionOverlay = $('#stash .system-action-overlay').clone()
@@ -923,29 +929,27 @@ function OnSystemClick() {
 }
 
 function ActivateConnection(path) {
-    if(path.connection.$infoPanel) {
-        var $stashActionPanel = $('#stash .connection-actions');
-        path.connection.$actionPanel = path.connection.$infoPanel;
-        path.connection.$infoPanel = null;
-        path.connection.$actionPanel.attr('class',
-            $stashActionPanel.attr('class'));
-        path.connection.$actionPanel.attr('data-path-id', path.id);
-        path.connection.$actionPanel.html($stashActionPanel.html());
-    }
-    else if(!path.connection.$actionPanel) {
-        var rectBox = path.childConnRect.getBBox();
-        path.connection.$actionPanel = $('#stash .connection-actions').clone()
-            .appendTo('#map');
-        path.connection.$actionPanel.attr('data-path-id', path.id);
-        path.connection.$actionPanel.css(
-            {'top': rectBox.y, 'left': rectBox.x2});
+    if(!path.connection.$actionOverlay) {
+        if(path.connection.$infoPanel) {
+            path.connection.$infoPanel.remove();
+            path.connection.$infoPanel = null;
+        }
+
+        var parentConnRectBox = path.parentConnRect.getBBox();
+        var childConnRectBox = path.childConnRect.getBBox();
+        path.connection.$actionOverlay = $('#stash .connection-action-overlay')
+            .clone().appendTo('#map');
+        path.connection.$actionOverlay.css({'top' : parentConnRectBox.y,
+            'left' : parentConnRectBox.x, 'height' : parentConnRectBox.height,
+            'width' : childConnRectBox.x2 - parentConnRectBox.x});
+        path.connection.$actionOverlay[0].connection = path.connection;
     }
 }
 
 function OnConnectionClick() {
     var path = this.path;
     if(path.connection && !path.connection.locked &&
-       !path.connection.$actionPanel && !path.childNode.locked) {
+       !path.connection.$actionOverlay && !path.childNode.locked) {
         $.ajax({
             type: 'POST',
             url: '/lock_object/',

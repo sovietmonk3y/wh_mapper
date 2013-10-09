@@ -32,8 +32,7 @@ select {
     position: relative;
 }
 
-.system-info, .system-actions, .connection-info, .connection-actions,
-.new-connection-form, .edit-connection-form {
+.system-info, .connection-info {
     border: 1px solid #80ADC1;
 
     border-radius: 10px;
@@ -100,11 +99,11 @@ rect {
                 no-repeat;
 }
 
-.system-action-overlay {
+.system-action-overlay, .connection-action-overlay {
     position: absolute;
 }
 
-.system-action-overlay img {
+.system-action-overlay img, .connection-action-overlay img {
     cursor: pointer;
     position: absolute;
 }
@@ -154,4 +153,12 @@ rect {
 
 .new-object-choice #wormhole {
     background-color: #9b59b6;
+}
+
+.connection-action-overlay #edit-parent {
+    left: 40px;
+}
+
+.connection-action-overlay #edit-child {
+    right: 0px;
 }
