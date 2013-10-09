@@ -7,6 +7,10 @@ a {
     color: white;
 }
 
+form, p {
+    margin: 0;
+}
+
 select {
     height: 40px;
     width: 300px;
@@ -29,8 +33,7 @@ select {
 }
 
 .system-info, .system-actions, .connection-info, .connection-actions,
-.new-system-form, .edit-system-form, .new-connection-form,
-.edit-connection-form {
+.new-connection-form, .edit-connection-form {
     border: 1px solid #80ADC1;
 
     border-radius: 10px;
@@ -44,6 +47,7 @@ select {
 
 table {
     font-size: 13px;
+    color: black;
 }
 
 text {
@@ -94,4 +98,60 @@ rect {
     position: absolute;
     background: rgba(0, 0, 0, .6) url(/static/images/lock-icon.png) 50% 50%
                 no-repeat;
+}
+
+.system-action-overlay {
+    position: absolute;
+}
+
+.system-action-overlay img {
+    cursor: pointer;
+    position: absolute;
+}
+
+.system-action-overlay #delete {
+    top: 5px;
+    left: 5px;
+}
+
+.system-action-overlay #edit {
+    top: 5px;
+    right: 5px;
+}
+
+.system-action-overlay #add {
+    bottom: 5px;
+    right: 5px;
+}
+
+.ui-dialog {
+    color: black;
+    width: auto !important;
+}
+
+.ui-dialog-titlebar {
+    display: none;
+}
+
+.new-system-form, .edit-system-form, .new-object-choice {
+    height: auto !important;
+    min-height: 0 !important;
+}
+
+.ui-autocomplete {
+    font-size: 0.8em !important;
+}
+
+.new-object-choice input {
+    border: 0px;
+    color: white;
+    float: right;
+}
+
+.new-object-choice #gate {
+    background-color: #27ae60;
+}
+
+.new-object-choice #wormhole {
+    background-color: #9b59b6;
 }

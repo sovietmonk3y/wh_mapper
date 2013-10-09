@@ -78,7 +78,7 @@
                   <br/>Effects:<br/>
                 </div>
                 <div id="system-info-notes" hidden="true">
-                  <br/><br/>Notes:
+                  <br/>Notes:
                 </div>
                 <div id="system-info-lock" hidden="true">
                   <br/>LOCKED BY:<br/>
@@ -104,15 +104,21 @@
                 <a id="edit-connection" href="">Edit connection</a>
             </div>
 
+            <div class="new-object-choice">
+                <p>What kind of connection would you like to create?</p>
+                <input id="wormhole" type="button" value="Wormhole">
+                <input id="gate" type="button" value="Gate">
+            </div>
+
             <div class="new-system-form">
                 <form>
                     <table>
                         <tr>
-                            <td>Name:</td>
-                            <td><input id="system-name"></td>
+                            <td>
+                                <input id="system-name">
+                            </td>
                         </tr>
                         <tr>
-                            <td></td>
                             <td>
                                 <input type="submit" value="Submit" disabled>
                             </td>
@@ -192,6 +198,12 @@
             </div>
 
             <div class="lock-overlay"></div>
+
+            <div class="system-action-overlay">
+                <img id="delete" src="{% static 'images/icon-close.png' %}">
+                <img id="edit" src="{% static 'images/icon-edit.png' %}">
+                <img id="add" src="{% static 'images/icon-add.png' %}">
+            </div>
         </div>
     </body>
 </html>

@@ -89,27 +89,35 @@ $(document).ready(function() {
     if(typeof(systemTree) != 'undefined' && systemTree && systemTreeLength) {
 
         document.onclick = function(e) {
-            var tag_name = e.target.tagName.toLowerCase();
-            if(tag_name != 'rect' && tag_name != 'text' &&
-               tag_name != 'tspan' && tag_name != 'path' && tag_name != 'a' &&
-               !$(e.target).closest('form').length) {
-                ClearSelection();
-            }
+            var tagName = e.target.tagName.toLowerCase();
+            if(tagName == 'svg' || tagName == 'body') ClearSelection();
         };
 
         document.onkeydown = function(e) {
             if(e.which == 27) ClearSelection();
         };
 
-        function ReplaceActionPanelSystemAction(link, formClass) {
-            var $stashSystemForm = $('#stash .' + formClass);
-            var $container = $(link).parent();
-            $container.html($stashSystemForm.html());
-            $container.attr('class', $stashSystemForm.attr('class'));
-            $container.find('#system-name').focus().autocomplete({
-                select: function(event, ui) {
-                    $(this).closest('form').find('input:submit')
-                                           .removeAttr('disabled');
+        $('#map').on('keyup', '#system-name', function(e) {
+            if(e.target.value == '')
+                $(this).closest('form').find('input:submit').attr('disabled',
+                    true);
+        });
+
+        function ActivateSystemActionModal(system, formClass) {
+            var $container = $('#stash .' + formClass).clone().dialog({
+                appendTo: '#map',
+                modal: true,
+                close: function(e) {
+                    $(e.target).dialog('destroy');
+                }
+            });
+
+            $container[0].system = system;
+
+            $container.find('#system-name').autocomplete({
+                select: function() {
+                    $(this).closest('form').find('input:submit').removeAttr(
+                        'disabled');
                 },
                 source: function(request, response) {
                     var $input = this.element;
@@ -132,60 +140,52 @@ $(document).ready(function() {
                     });
                 }
             });
+
+            return $container;
         }
 
-        $('#map').on('click', '#add-system', function(e) {
-            e.preventDefault();
-            ReplaceActionPanelSystemAction(this, 'new-system-form');
-        });
-
-        $('#map').on('click', '#edit-system', function(e) {
-            e.preventDefault();
+        $('#map').on('click', '.new-object-choice #gate', function() {
             var $container = $(this).parent();
-            ReplaceActionPanelSystemAction(this, 'edit-system-form');
-            var system = paper.getById($container.attr('data-rect-id'))
-                              .system;
-            $container.find('#system-name').val(system.name);
-            $container.find('#system-notes').val(system.notes_text);
+            var system = $container[0].system;
+            $container.dialog('destroy');
+            ActivateSystemActionModal(system, 'new-system-form');
         });
 
-        $('#map').on('click', '#add-connection', function(e) {
-            e.preventDefault();
-
-            var $stashConnectionForm = $('#stash .new-connection-form');
+        $('#map').on('click', '.new-object-choice #wormhole', function() {
             var $container = $(this).parent();
-            $container.html($stashConnectionForm.html());
-            $container.attr('class', $stashConnectionForm.attr('class'));
-            $container.find('#wormhole-sig').focus();
+            var system = $container[0].system;
+            $container.dialog('destroy');
+            ActivateSystemActionModal(system, 'new-connection-form');
         });
 
-        $('#map').on('click', '#edit-connection', function(e) {
-            e.preventDefault();
+        function ActivateSystemAdditionModal(button) {
+            var $container = $('#stash .new-object-choice').clone().dialog({
+                appendTo: '#map',
+                modal: true,
+                close: function(e) {
+                    $(e.target).dialog('destroy');
+                }
+            });
 
-            var $stashConnectionForm = $('#stash .new-connection-form');
-            var $container = $(this).parent();
-            var connection = paper.getById($container.attr('data-path-id'))
-                                  .connection;
-            $container.html($stashConnectionForm.html());
-            $container.attr('class',
-                $stashConnectionForm.attr('class').replace('new', 'edit'));
-            $container.find('#wormhole-sig').val(
-                connection.wormhole.sig).focus();
-            $container.find('#origin-celestial').val(
-                connection.parent_celestial);
-            $container.find('#destination-celestial').val(
-                connection.child_celestial);
-            $container.find('#life-level[value="' + connection.life_level +
-                            '"]').attr('checked', true);
-            $container.find('#mass-level[value="' + connection.mass_level +
-                            '"]').attr('checked', true);
+            $container.children('#gate').focus();
+
+            $container[0].system = button.parentElement.system;
+        }
+
+        $('#map').on('click', '.system-action-overlay #add', function() {
+            ActivateSystemAdditionModal(this);
         });
 
-        $('#map').on('click', '#delete-system', function(e) {
-            e.preventDefault();
+        $('#map').on('click', '.system-action-overlay #edit', function() {
+            var system = this.parentElement.system;
+            var $formDiv = ActivateSystemActionModal(system,
+                'edit-system-form');
+            $formDiv.find('#system-name').val(system.name);
+            $formDiv.find('#system-notes').val(system.notes_text);
+        });
 
-            var nodeID = paper.getById($(this).parent().attr('data-rect-id'))
-                              .system.id;
+        $('#map').on('click', '.system-action-overlay #delete', function() {
+            var nodeID = this.parentElement.system.id;
             $.ajax({
                 type: 'DELETE',
                 url: '/api/system_node/' +
@@ -222,10 +222,10 @@ $(document).ready(function() {
                 data: {
                     'system': systemName,
                     'page_name': window.location.pathname.split('/')[1],
-                    'parent_node': paper.getById(
-                        $formDiv.attr('data-rect-id')).system.id
+                    'parent_node': $formDiv[0].system.id
                 },
                 success: function(data) {
+                    $formDiv.dialog('destroy');
                     ClearSelection(true);
                     AddNode(JSON.parse(data));
                 },
@@ -251,13 +251,13 @@ $(document).ready(function() {
                 type: 'PUT',
                 url: '/api/system_node/' +
                      window.location.pathname.split('/')[1] + '/' +
-                     paper.getById($formDiv.attr('data-rect-id')).system.id +
-                     '/',
+                     $formDiv[0].system.id + '/',
                 data: {
                     'system': systemName,
                     'notes': $formDiv.find('#system-notes').val()
                 },
                 success: function(data) {
+                    $formDiv.dialog('destroy');
                     ClearSelection(true);
                     UpdateNode(JSON.parse(data));
                 },
@@ -301,11 +301,11 @@ $(document).ready(function() {
                         $formDiv.find('#destination-celestial').val().trim(),
                     'life_level': $lifeLevel.val(),
                     'mass_level': $massLevel.val(),
-                    'parent_node': paper.getById(
-                        $formDiv.attr('data-rect-id')).system.id,
+                    'parent_node': $formDiv[0].system.id,
                     'page_name': window.location.pathname.split('/')[1]
                 },
                 success: function(data) {
+                    $formDiv.dialog('destroy');
                     ClearSelection(true);
                     AddNode(JSON.parse(data));
                 },
@@ -313,6 +313,28 @@ $(document).ready(function() {
                     alert(xhr.responseText);
                 }
             });
+        });
+
+        $('#map').on('click', '#edit-connection', function(e) {
+            e.preventDefault();
+
+            var $stashConnectionForm = $('#stash .new-connection-form');
+            var $container = $(this).parent();
+            var connection = paper.getById($container.attr('data-path-id'))
+                .connection;
+            $container.html($stashConnectionForm.html());
+            $container.attr('class', $stashConnectionForm.attr('class').replace(
+                'new', 'edit'));
+            $container.find('#wormhole-sig').val(connection.wormhole.sig)
+                .focus();
+            $container.find('#origin-celestial').val(
+                connection.parent_celestial);
+            $container.find('#destination-celestial').val(
+                connection.child_celestial);
+            $container.find('#life-level[value="' + connection.life_level +
+                '"]').attr('checked', true);
+            $container.find('#mass-level[value="' + connection.mass_level +
+                '"]').attr('checked', true);
         });
 
         $('#map').on('submit', '.edit-connection-form', function(e) {
@@ -720,13 +742,12 @@ function ConnectSystems(paper, parentSystem, childSystem) {
 
 function OnSystemHover() {
     var rect;
-    if(this.tagName && this.tagName.toLowerCase() == 'div')
-        rect = paper.getById($(this).attr('data-rect-id'));
+    if(this.tagName && this.tagName.toLowerCase() == 'div') rect = this.rect;
     else if(this.type == 'rect') rect = this;
     else rect = this.rect;
 
     var system = rect.system;
-    if(!system.$infoPanel && !system.$actionPanel) {
+    if(!system.$infoPanel && !system.$actionOverlay) {
         if(!system.locked) rect.node.classList.add('hover');
 
         var rectBox = rect.getBBox();
@@ -751,8 +772,7 @@ function OnSystemHover() {
 
 function OnSystemHoverOut() {
     var rect;
-    if(this.tagName && this.tagName.toLowerCase() == 'div')
-        rect = paper.getById($(this).attr('data-rect-id'));
+    if(this.tagName && this.tagName.toLowerCase() == 'div') rect = this.rect;
     else if(this.type == 'rect') rect = this;
     else rect = this.rect;
 
@@ -808,7 +828,7 @@ function OnConnectionHoverOut() {
 
 function ClearSelection(softClear) {
     paper.forEach(function(el) {
-        if((el.type == 'rect' && el.system && el.system.$actionPanel) ||
+        if((el.type == 'rect' && el.system && el.system.$actionOverlay) ||
            (el.type == 'path' && el.connection && el.connection.$actionPanel)) {
             if(!softClear) {
                 $.ajax({
@@ -822,10 +842,12 @@ function ClearSelection(softClear) {
             }
             if(el.type == 'rect') {
                 el.node.classList.remove('hover');
-                el.system.$actionPanel.remove();
-                el.system.$actionPanel = null;
+                el.system.$actionOverlay.remove();
+                el.system.$actionOverlay = null;
             }
             else {
+                el.childConnRect.node.classList.remove('hover');
+                el.parentConnRect.node.classList.remove('hover');
                 el.connection.$actionPanel.remove();
                 el.connection.$actionPanel = null;
             }
@@ -835,19 +857,16 @@ function ClearSelection(softClear) {
 }
 
 function ActivateNode(system, rect) {
-    if(system.$infoPanel) {
-        var $stashActionPanel = $('#stash .system-actions');
-        system.$actionPanel = system.$infoPanel;
+    if(!system.$actionOverlay) {
+        system.$infoPanel.remove();
         system.$infoPanel = null;
-        system.$actionPanel.attr('class', $stashActionPanel.attr('class'));
-        system.$actionPanel.attr('data-rect-id', rect.id);
-        system.$actionPanel.html($stashActionPanel.html());
-    }
-    else if(!system.$actionPanel) {
+
         var rectBox = rect.getBBox();
-        system.$actionPanel = $('#stash .system-actions').clone()
-                              .appendTo('#map');
-        system.$actionPanel.css({'top': rectBox.y, 'left': rectBox.x2});
+        system.$actionOverlay = $('#stash .system-action-overlay').clone()
+            .appendTo('#map');
+        system.$actionOverlay.css({'top' : rectBox.y, 'left' : rectBox.x,
+            'height' : rectBox.height, 'width' : rectBox.width});
+        system.$actionOverlay[0].system = system;
     }
 }
 
@@ -857,7 +876,7 @@ function OnSystemClick() {
     else rect = this.rect;
     var system = rect.system;
 
-    if(!system.locked && !system.$actionPanel) {
+    if(!system.locked && !system.$actionOverlay) {
         if(system.children.length) {
             var checkedDescendants = [];
             var currentNode = system;
@@ -956,12 +975,13 @@ function TraverseToNextNode(currentNode) {
 
 function LockOverlayOnNode(rect) {
     var rectBox = rect.getBBox();
-    rect.$lockOverlay = $('#stash .lock-overlay').clone().appendTo('#map');
-    rect.$lockOverlay.css({'top' : rectBox.y, 'left' : rectBox.x,
+    rect.system.$lockOverlay = $('#stash .lock-overlay').clone().appendTo(
+        '#map');
+    rect.system.$lockOverlay.css({'top' : rectBox.y, 'left' : rectBox.x,
         'height' : rectBox.height, 'width' : rectBox.width});
-    rect.$lockOverlay.attr('data-rect-id', rect.id);
-    rect.$lockOverlay.on('mouseenter', OnSystemHover);
-    rect.$lockOverlay.on('mouseleave', OnSystemHoverOut);
+    rect.system.$lockOverlay[0].rect = rect;
+    rect.system.$lockOverlay.on('mouseenter', OnSystemHover);
+    rect.system.$lockOverlay.on('mouseleave', OnSystemHoverOut);
 }
 
 function LockNode(rect, username, noTraversal) {
@@ -996,7 +1016,7 @@ function UnlockNode(rect, noTraversal) {
     var currentNode = rect.system;
     var locker = currentNode.locked;
     currentNode.locked = null;
-    rect.$lockOverlay.remove();
+    currentNode.$lockOverlay.remove();
     if(rect.pathToParent && rect.pathToParent.connection)
         UnlockConnection(rect.pathToParent, true);
     if(!noTraversal && currentNode.children.length) {
@@ -1008,7 +1028,7 @@ function UnlockNode(rect, noTraversal) {
             if(currentNode.id == rect.system.id) break;
             if(currentNode.locked && currentNode.locked == locker) {
                 currentNode.locked = null;
-                currentNode.rect.$lockOverlay.remove();
+                currentNode.$lockOverlay.remove();
                 if(currentNode.rect.pathToParent &&
                    currentNode.rect.pathToParent.connection)
                     UnlockConnection(currentNode.rect.pathToParent, true);
@@ -1130,6 +1150,32 @@ function MoveNodeUp(rect, distance) {
     }
 }
 
+function RemoveNodeElements(system) {
+    if(system.$infoPanel) system.$infoPanel.remove();
+    if(system.$lockOverlay) system.$lockOverlay.remove();
+
+    if(system.rect.pathToParent.connection) {
+        if(system.rect.pathToParent.connection.$infoPanel)
+            system.rect.pathToParent.connection.$infoPanel.remove();
+        if(system.rect.pathToParent.connection.$lockOverlay)
+            system.rect.pathToParent.connection.$lockOverlay.remove();
+
+        system.rect.pathToParent.connectionLifeText.remove();
+        system.rect.pathToParent.connectionJumpMassText.remove();
+        system.rect.pathToParent.connectionMassText.remove();
+    }
+
+    system.rect.pathToParent.parentConnRect.triangle.remove();
+    system.rect.pathToParent.parentConnRect.text.remove();
+    system.rect.pathToParent.parentConnRect.remove();
+    system.rect.pathToParent.childConnRect.triangle.remove();
+    system.rect.pathToParent.childConnRect.text.remove();
+    system.rect.pathToParent.childConnRect.remove();
+    system.rect.pathToParent.remove();
+    system.rect.text.remove();
+    system.rect.remove();
+}
+
 function DeleteNode(nodeID) {
     paper.forEach(function(el) {
         if(el.type == 'rect' && el.system && el.system.id == nodeID) {
@@ -1142,25 +1188,7 @@ function DeleteNode(nodeID) {
                     if((currentNode.y - el.system.y + 1) > nodeChainWidth)
                         nodeChainWidth = currentNode.y - el.system.y + 1;
 
-                    if(currentNode.rect.pathToParent.connection) {
-                        currentNode.rect.pathToParent.connectionLifeText
-                            .remove();
-                        currentNode.rect.pathToParent.connectionJumpMassText
-                            .remove();
-                        currentNode.rect.pathToParent.connectionMassText
-                            .remove();
-                    }
-                    currentNode.rect.pathToParent.parentConnRect.triangle
-                        .remove();
-                    currentNode.rect.pathToParent.parentConnRect.text.remove();
-                    currentNode.rect.pathToParent.parentConnRect.remove();
-                    currentNode.rect.pathToParent.childConnRect.triangle
-                        .remove();
-                    currentNode.rect.pathToParent.childConnRect.text.remove();
-                    currentNode.rect.pathToParent.childConnRect.remove();
-                    currentNode.rect.pathToParent.remove();
-                    currentNode.rect.text.remove();
-                    currentNode.rect.remove();
+                    RemoveNodeElements(currentNode);
 
                     if(currentNode.id == nodeID) {
                         if(currentNode.y == currentNode.parent.y &&
@@ -1220,7 +1248,7 @@ function UpdateNode(node) {
             el.system.date = node.date;
             if(el.system.name != node.name) {
                 el.system.name = node.name;
-                el.text.attr('text', node.name + '\n(' + node.type + ')');
+                el.text.attr('text', GetSystemText(node));
                 if(el.system.type != node.type) {
                     el.system.type = node.type;
                     ColorSystem(el.system);
