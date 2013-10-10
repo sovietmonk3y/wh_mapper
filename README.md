@@ -3,7 +3,7 @@ wh_mapper
 
 wh_mapper is a real-time/shared environment tool for Eve Online that is meant for system and wormhole mapping. It is a Python based project that utilizes the Django framework for its backend as well as the Tornado framework for its backend and the server it runs on.
 
-This project initially followed some of the design of and used a minimal amount of frontend assets (html, js, etc.) from the "wormhole space"/"wh-space" project by arcanist hosted on Sourceforge (http://sourceforge.net/projects/wh-space/) under the GNU General Public License (GPL). As of the present time, “wh-space” can be attributed as an influence on this project.
+This project initially followed some of the design of and used a minimal amount of frontend assets (html, js, etc.) from the ["wormhole space"/"wh-space" project by arcanist hosted on Sourceforge](http://sourceforge.net/projects/wh-space/) under the GNU General Public License (GPL). As of the present time, “wh-space” can be attributed as an influence on this project.
 
 
 Background
@@ -34,4 +34,16 @@ There was a focus on making this project as simple as possible. There are some s
 Credits
 ---------
 
-* `travhimself <https://github.com/travhimself>`_: responsible for the entire frontend/UI design and direction
+* [travhimself](https://github.com/travhimself): responsible for frontend/UI design and direction
+
+
+Planned Updates/Changes (mostly in chronological order)
+-----------------------------------------------
+
+* A timeout js function that will run every 15 minutes or something along those lines on the client side to refresh/re-calculate the life on a wormhole connection as would happen if the map page were to be refreshed
+* Fix the issue of the info panels that are activated upon hovering over nodes or wormhole connections getting contracted if they would pass the edge of the screen
+* Potentially add some sort of styling or method of differentiation between static and "wandering" wormhole connections
+* Some sort of map scalability. One current idea is to implement background click-dragging functionality so the user can intuitively move vertically and horizontally around on the map to focus in on what they want to see
+* Potentially add a zoom feature that would allow the user to scale the map down
+* Potentially add a caching layer to speed up the entire system and take load off of the database as many data queries could be handled simply through cache. This may very well end up being redis
+* Change the current long polling implementation to be web socket based. Potentially add a redis based pubsub system to eliminate the pulses global Tornado var currently being used.
