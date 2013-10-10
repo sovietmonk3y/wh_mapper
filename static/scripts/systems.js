@@ -949,7 +949,7 @@ function ActivateConnection(path) {
 function OnConnectionClick() {
     var path = this.path;
     if(path.connection && !path.connection.locked &&
-       !path.connection.$actionOverlay && !path.childNode.locked) {
+       !path.connection.$actionOverlay && !path.childNode.system.locked) {
         $.ajax({
             type: 'POST',
             url: '/lock_object/',
@@ -1023,7 +1023,8 @@ function UnlockNode(rect, noTraversal) {
     currentNode.$lockOverlay.remove();
     if(rect.pathToParent && rect.pathToParent.connection)
         UnlockConnection(rect.pathToParent, true);
-    if(!noTraversal && currentNode.children.length) {
+    if(!noTraversal && currentNode.children.length &&
+       currentNode.children[0].locked) {
         while(currentNode) {
             if(currentNode.children.length && currentNode.children[0].locked)
                 currentNode = currentNode.children[0];
@@ -1336,13 +1337,15 @@ function GetUpdates() {
                 if(data.object_lock.username) {
                     paper.forEach(function(el) {
                         if(el.type == 'rect' && el.system && el.system.locked &&
-                           el.system.locked == data.object_lock.username)
+                           el.system.locked == data.object_lock.username) {
                             UnlockNode(el);
+                        }
                         else if(el.type == 'path' && el.connection &&
                                 el.connection.locked &&
                                 el.connection.locked ==
-                                data.object_lock.username)
+                                data.object_lock.username) {
                             UnlockConnection(el);
+                        }
                     });
                 }
                 paper.forEach(function(el) {
