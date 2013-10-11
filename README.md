@@ -6,6 +6,26 @@ wh_mapper is a real-time/shared environment tool for Eve Online that is meant fo
 This project initially followed some of the design of and used a minimal amount of frontend assets (html, js, etc.) from the ["wormhole space"/"wh-space" project by arcanist hosted on Sourceforge](http://sourceforge.net/projects/wh-space/) under the GNU General Public License (GPL). As of the present time, “wh-space” can be attributed as an influence on this project.
 
 
+Screenshots
+-----------
+
+Single user PoV of a map with various system nodes and wormhole connections:
+![alt text](http://i.imgur.com/pP0UA7Ml.jpg "Map")
+
+Two user PoV where one user is interacting with a system node and the other user witnesses the node lock:
+![alt text](http://i.imgur.com/qnMWFTQl.jpg "System action UI")
+![alt text](http://i.imgur.com/N7VeAVQl.jpg "System locks")
+
+Single user PoV of the beginning step of the creation process:
+![alt text](http://i.imgur.com/SZRytewl.jpg "Creation UI")
+
+Single user PoV of the system node editing interface - it is almost identical to the "gate connection" creation interface:
+![alt text](http://i.imgur.com/JmVqX2il.jpg "System editing UI")
+
+Single user PoV of the wormhole connection editing interface - it is identical to the wormhole connection creation interface:
+![alt text](http://i.imgur.com/qdEcTGsl.jpg "Wormhole connection editing UI")
+
+
 Background
 ----------
 
