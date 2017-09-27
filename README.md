@@ -20,7 +20,6 @@ Single user PoV of the beginning step of the creation process:
 ![alt text](http://i.imgur.com/SZRytewl.jpg "Creation UI")
 
 Single user PoV of the system node editing interface - it is almost identical to the "gate connection" creation interface:
-
 ![alt text](http://i.imgur.com/Vf5rM0Bl.jpg "System editing UI")
 
 Single user PoV of the wormhole connection editing interface - it is identical to the wormhole connection creation interface:
