@@ -62,6 +62,28 @@ The following are only what has been used in developing this tool and not what i
 
 There was a focus on making this project as simple as possible. There are some scripts bundled with the project that use BeautifulSoup but they are simply products of what was necessary to retrieve data about all the systems and wormholes within Eve Online. South was also used during development to manage database changes.
 
+#### Default Setup
+
+To run the application with a minimal and default manual setup, the following
+must be done:
+1. Install `MySQL Server` and the `libmysqlclient-dev` (or its equivalent)
+   system packages
+   - During `MySQL Server` installation, leave the `root` user's password blank
+2. Install `Python 2.7` and `pip`
+3. Install the following `pip` packages: `mysql-python`, `south`,
+   `django==1.5.2`, and `tornado==3.1.1`
+4. Create the `wh_mapper` database in `MySQL`
+5. Run `./manage.py syncdb` from the project root directory. Create a Django
+   Auth superuser when queried.
+    - If the MySQL `root` user can't be accessed by Django without it running
+      as the `root` system user, there are two quick options:
+      - Run the application procedures as the `root` system user
+      - Change the MySQL `root` user's plugin to something other than
+        `auth_socket`
+6. Run `./manage.py migrate` to execute the South database migrations
+7. Run `python tornado_main.py` to start the server.
+    - The web application should now be accessible at `localhost:8000`.
+
 
 Credits
 -------
