@@ -1,6 +1,15 @@
 wh_mapper
 =========
 
+**Table of Contents**
+
+- [Project Description](#project-description)
+- [Screenshots](#screenshots)
+- [Background](#background)
+- [Installation and Requirements](#installation-and-requirements)
+- [Credits](#credits)
+- [Planned Updates and Changes](#planned-updates-and-changes)
+
 Project Description
 -------------------
 
