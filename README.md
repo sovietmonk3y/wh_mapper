@@ -1,6 +1,9 @@
 wh_mapper
 =========
 
+Project Description
+-------------------
+
 wh_mapper is a real-time/shared environment tool for Eve Online that is meant for system and wormhole mapping. It is a Python based project that utilizes the Django framework for its backend as well as the Tornado framework for its backend and the server it runs on.
 
 This project initially followed some of the design of and used a minimal amount of frontend assets (html, js, etc.) from the ["wormhole space"/"wh-space" project by arcanist hosted on Sourceforge](http://sourceforge.net/projects/wh-space/) under the GNU General Public License (GPL). As of the present time, “wh-space” can be attributed as an influence on this project.
@@ -40,8 +43,8 @@ We began to branch out and test out different visual mapping tools. Some call th
 After having dealt with mapping tools that have strange quirks and inefficiencies, it seemed that we had come full circle and were back to our old friend the spreadsheet. This was when this project was conceptualized. There was motivation from us to build a tool that would be superior to everything we had experienced in every way. It would be faster, more efficient, and it would serve all of our needs as well as having some intelligent design that the others may be lacking. We were all developers and we knew exactly what would need to happen and how it would work. As with all things, there is a time commitment. After some time, I eventually made the decision to dedicate some time to this project and see it through. This is the result.
 
 
-Installation/Requirements
--------------------------------
+Installation and Requirements
+-----------------------------
 
 The following are only what has been used in developing this tool and not what is rigidly required:
 
@@ -52,14 +55,15 @@ There was a focus on making this project as simple as possible. There are some s
 
 
 Credits
----------
+-------
 
 * [travhimself](https://github.com/travhimself): responsible for frontend/UI design and direction
 
 
-Planned Updates/Changes (mostly in chronological order)
------------------------------------------------
+Planned Updates and Changes
+---------------------------
 
+ This list is mostly in chronological order.
 * A timeout js function that will run every 15 minutes or something along those lines on the client side to refresh/re-calculate the life on a wormhole connection as would happen if the map page were to be refreshed
 * Fix the issue of the info panels that are activated upon hovering over nodes or wormhole connections getting contracted if they would pass the edge of the screen
 * Potentially add some sort of styling or method of differentiation between static and "wandering" wormhole connections
